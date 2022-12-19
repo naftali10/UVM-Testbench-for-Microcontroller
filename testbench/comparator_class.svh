@@ -15,7 +15,7 @@ class comparator_class extends uvm_component;
   endfunction: build_phase
 
   virtual function void put(refmod_transaction_class t);
-    `uvm_info("Got it!",$sformatf("stalled = %0d",t.stalled), UVM_NONE)
+    // `uvm_info(get_name(), $sformatf("stalled = %0d",t.stalled), UVM_NONE)
   endfunction: put
   
 endclass: comparator_class

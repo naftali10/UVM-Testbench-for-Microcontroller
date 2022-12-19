@@ -30,7 +30,8 @@ class driver_class extends uvm_driver#(transaction_class);
     forever begin
 
       seq_item_port.get_next_item(transaction_inst);
-      `uvm_info(get_name(), "New sequence item is driven", UVM_NONE)
+      `uvm_info(get_name(), "New sequence item is driven:", UVM_NONE)
+      transaction_inst.print();
       // Pin wiggles
       dut_vifc_in.cb.reset <= transaction_inst.reset;
       dut_vifc_in.cb.instv <= transaction_inst.instv;
@@ -40,14 +41,20 @@ class driver_class extends uvm_driver#(transaction_class);
       dut_vifc_in.cb.src2 <= transaction_inst.src2;
       dut_vifc_in.cb.dst <= transaction_inst.dst;
 
-      #`CYCLE_TIME // For controller DUT to update Stall signal
-      #`HALF_CYCLE_TIME // For Stall signal to stabelize
-      wait(dut_vifc_out.stalledx3==1'b0);
+      wait_for_no_stall();
 
       seq_item_port.item_done();
 
     end
     
+  endtask
+
+  virtual task wait_for_no_stall();
+
+      #`CYCLE_TIME //  Wait for IFC feeding in negedge and DUT output update in posedge
+      #`HALF_CYCLE_TIME // Wait for stall signal to stabilize
+      wait(dut_vifc_out.stalledx3 === 1'b0);
+
   endtask
 
 endclass : driver_class

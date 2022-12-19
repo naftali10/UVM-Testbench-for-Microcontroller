@@ -25,16 +25,10 @@ class monitor_class extends uvm_monitor;
   // Run phase
   task run_phase(uvm_phase phase);
     transaction_class transaction_inst = transaction_class::type_id::create("transaction_inst");
-    
-    forever begin
-      @(dut_vifc_out.stalledx3);
-      `uvm_info(get_name(), $sformatf("stalled = %0d",dut_vifc_out.stalledx3), UVM_NONE)
-    end
 
     forever begin
 
-      @(dut_vifc_in.imm);      
-      @(negedge dut_vifc_in.clock);
+      @(posedge dut_vifc_in.clock);
       // Inputs
       transaction_inst.reset = dut_vifc_in.reset;
       transaction_inst.instv = dut_vifc_in.instv;
@@ -49,6 +43,7 @@ class monitor_class extends uvm_monitor;
       transaction_inst.dataoutvx3 = dut_vifc_out.dataoutvx3;
       transaction_inst.dataoutx3 = dut_vifc_out.dataoutx3;
       
+      `uvm_info(get_name(), "Sending to reference model.", UVM_NONE)
       analysis_port_inst.write(transaction_inst);
 
     end

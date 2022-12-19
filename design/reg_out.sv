@@ -12,7 +12,6 @@ interface reg_out (input logic clock);
     stalledx3 <= stalled;
     dataoutvx3 <= dataoutvx2;
     dataoutx3 <= dataoutx2;
-    `uvm_info("reg_out", $sformatf("stalled got updated, and it's equal to %b", stalled), UVM_NONE)
   end
   
   modport driver (output stalled,
