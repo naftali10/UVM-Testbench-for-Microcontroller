@@ -6,21 +6,21 @@ class reference_model_class extends uvm_component;
     super.new(name, parent);
   endfunction: new
   
-  // Declarations
-  uvm_analysis_imp#(transaction_class, reference_model_class) analysis_port_inst;
-  uvm_blocking_put_port#(refmod_transaction_class) put_port_inst;
-  refmod_transaction_class refmod_transaction_inst;
+  // Instantiation
+  uvm_analysis_imp#(input_transaction_class, reference_model_class) analysis_imp_inst;
+  uvm_blocking_get_imp#(output_transaction_class, reference_model_class) get_imp_inst;
+  output_transaction_class refmod_transaction_inst;
   event process_instruction;
-  transaction_class tx_transfer;
+  input_transaction_class tx_transfer;
   t_data regfile [`REG_AMT-1:0];
   
   // Build phase
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    analysis_port_inst = new("analysis_port_inst", this);
-    put_port_inst = new("put_port_inst", this);
-    refmod_transaction_inst = refmod_transaction_class::type_id::create("refmod_transaction_inst");
-    tx_transfer = transaction_class::type_id::create("tx_transfer");;
+    analysis_imp_inst = new("analysis_imp_inst", this);
+    get_imp_inst = new("get_imp_inst", this);
+    refmod_transaction_inst = output_transaction_class::type_id::create("refmod_transaction_inst");
+    tx_transfer = input_transaction_class::type_id::create("tx_transfer");;
   endfunction: build_phase
 
   // Run phase
@@ -41,10 +41,10 @@ class reference_model_class extends uvm_component;
             t_data calc_res;
 
             // Clone transaction
-            transaction_class tx = transaction_class::type_id::create("tx");
+            input_transaction_class tx = input_transaction_class::type_id::create("tx");
             tx.copy(tx_transfer);
 
-            if (!refmod_transaction_inst.stalled && tx.instv) begin
+            if (!refmod_transaction_inst.stalled && tx.instv && instruction_is_legal(tx)) begin
               `uvm_info(get_name(), "Sequence item received and. Starting processing:", UVM_NONE)
               tx.print();
               calc_res = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
@@ -65,7 +65,7 @@ class reference_model_class extends uvm_component;
 
   endtask: run_phase
   
-  virtual function void write(transaction_class t);
+  virtual function void write(input_transaction_class t);
     tx_transfer.copy(t);
     -> process_instruction;
   endfunction: write
@@ -126,8 +126,19 @@ class reference_model_class extends uvm_component;
     endcase
   endfunction: write_regfile
 
+  function bit instruction_is_legal(input_transaction_class tx);
+
+    if (tx.opcode == LD && tx.src1 != IMM) return 1'b0;
+    if (tx.opcode == OUT && tx.src1 == IMM) return 1'b0;
+    return 1'b1;
+
+  endfunction: instruction_is_legal
+
   function void print_regfile();
     $display("%0d %0d %0d %0d", regfile[0], regfile[1], regfile[2], regfile[3]);
   endfunction
+
+  virtual function get(output_transaction_class t);
+  endfunction: get
 
 endclass: reference_model_class

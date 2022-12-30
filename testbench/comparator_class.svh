@@ -6,16 +6,24 @@ class comparator_class extends uvm_component;
     super.new(name, parent);
   endfunction: new
   
-  uvm_blocking_put_imp#(refmod_transaction_class, comparator_class) put_port_inst;
+  // Instantiations
+  uvm_nonblocking_put_imp#(output_transaction_class, comparator_class) put_port_inst;
+  uvm_blocking_get_port#(output_transaction_class) get_port_inst;
   
   // Build phase
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     put_port_inst = new("put_port_inst", this);
+    get_port_inst = new("get_port_inst", this);
   endfunction: build_phase
 
-  virtual function void put(refmod_transaction_class t);
-    // `uvm_info(get_name(), $sformatf("stalled = %0d",t.stalled), UVM_NONE)
-  endfunction: put
+  virtual function bit try_put(output_transaction_class t);
+    output_transaction_class ot;
+    get_port_inst.get(ot);
+    return 1;
+  endfunction: try_put
+
+  virtual function bit can_put();
+  endfunction: can_put
   
 endclass: comparator_class

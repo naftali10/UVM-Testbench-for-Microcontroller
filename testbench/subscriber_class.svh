@@ -1,4 +1,4 @@
-class subscriber_class extends uvm_subscriber#(transaction_class);
+class subscriber_class extends uvm_subscriber#(input_transaction_class);
   
   `uvm_component_utils(subscriber_class)
   
@@ -8,9 +8,6 @@ class subscriber_class extends uvm_subscriber#(transaction_class);
   t_data imm;
   t_reg_name src1, src2;
   t_reg_name dst;
-  logic stalledx3;
-  logic dataoutvx3;
-  t_data dataoutx3;
   
   // Coverage
   covergroup covergroup_type;
@@ -28,16 +25,13 @@ class subscriber_class extends uvm_subscriber#(transaction_class);
   endfunction: new
     
   // Write
-  function void write (transaction_class t);
+  function void write (input_transaction_class t);
     instv = t.instv;
     opcode = t.opcode;
     imm = t.imm;
     src1 = t.src1;
     src2 = t.src2;
     dst = t.dst;
-    stalledx3 = t.stalledx3;
-    dataoutvx3 = t.dataoutvx3;
-    dataoutx3 = t.dataoutx3;
     covergroup_type.sample();
   endfunction: write
   
