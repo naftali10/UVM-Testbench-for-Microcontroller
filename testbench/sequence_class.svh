@@ -1,4 +1,4 @@
-class sequence_class extends uvm_sequence#(transaction_class);
+class sequence_class extends uvm_sequence#(input_transaction_class);
   
   `uvm_object_utils(sequence_class)
   
@@ -6,17 +6,16 @@ class sequence_class extends uvm_sequence#(transaction_class);
     super.new(name);
   endfunction : new
   
-  transaction_class transaction_inst;
+  input_transaction_class input_transaction_inst;
   
   // Run phase
   task body();
     
-    `uvm_do_with(transaction_inst, {reset==1'b1;})
-    repeat (10) begin
-      `uvm_do_with(transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=IMM;})
-    end
-    repeat (10) begin
-      `uvm_do_with(transaction_inst, {reset==1'b0; instv==1'b1;})
+    repeat (2) begin
+      `uvm_do_with(input_transaction_inst, {reset==1'b1;})
+      repeat (2) begin
+        `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=IMM;})
+      end
     end
 
   endtask

@@ -12,8 +12,9 @@ interface reg_out (input logic clock);
     stalledx3 <= stalled;
     dataoutvx3 <= dataoutvx2;
     dataoutx3 <= dataoutx2;
-    `uvm_info("reg_out", $sformatf("stalled got updated, and it's equal to %b", stalled), UVM_NONE)
   end
+  
+  // always @(clock) $display("%t clock: %b, stalled: %b, stalledx3: %b", $time, clock, stalled, stalledx3); // FIXME - nkizner - 2022-12-31 - Delete fater debugging
   
   modport driver (output stalled,
                   output dataoutvx2,

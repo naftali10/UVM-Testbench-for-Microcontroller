@@ -12,6 +12,6 @@
 `include "Decode.sv"
 `include "Execute.sv"
 `include "WriteBack.sv"
-`include "Top.sv"
 `include "ifc_outputs.sv"
 `include "Output.sv"
+`include "Top.sv"

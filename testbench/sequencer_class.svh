@@ -1,4 +1,4 @@
-class sequencer_class extends uvm_sequencer#(transaction_class);
+class sequencer_class extends uvm_sequencer#(input_transaction_class);
 
   `uvm_component_utils(sequencer_class)
 

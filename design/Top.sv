@@ -26,4 +26,7 @@ module Processor (ifc_inputs.receiver global_inputs,
                        .ifc_WB_(ifc_WB_));
   Output output_(.reg_out_(reg_out_),
                  .ifc_outputs_(global_outputs));
+
+  always @(global_inputs.clock) $display("%t clock: %b, ALU out: %d", $time, global_inputs.clock, execution.ALU_inst.result); // FIXME - nkizner - 2022-12-31 - Delete fater debugging
+  
 endmodule

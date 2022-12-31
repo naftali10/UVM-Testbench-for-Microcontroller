@@ -1,4 +1,4 @@
-class driver_class extends uvm_driver#(transaction_class);
+class driver_class extends uvm_driver#(input_transaction_class);
 
   `uvm_component_utils(driver_class)
 
@@ -9,7 +9,7 @@ class driver_class extends uvm_driver#(transaction_class);
   // Instantiations
   virtual ifc_inputs dut_vifc_in;
   virtual ifc_outputs dut_vifc_out;
-  transaction_class transaction_inst;
+  input_transaction_class input_transaction_inst;
 
   // Build phase
   virtual function void build_phase(uvm_phase phase);
@@ -28,26 +28,37 @@ class driver_class extends uvm_driver#(transaction_class);
   virtual task run_phase(uvm_phase phase);
     
     forever begin
-
-      seq_item_port.get_next_item(transaction_inst);
-      `uvm_info(get_name(), "New sequence item is driven", UVM_NONE)
+      
+      @ (posedge dut_vifc_in.clock);
+      seq_item_port.get_next_item(input_transaction_inst);
+      `uvm_info(get_name(), "New sequence item is driven:", UVM_NONE)
+      input_transaction_inst.print();
       // Pin wiggles
-      dut_vifc_in.cb.reset <= transaction_inst.reset;
-      dut_vifc_in.cb.instv <= transaction_inst.instv;
-      dut_vifc_in.cb.opcode <= transaction_inst.opcode;
-      dut_vifc_in.cb.imm <= transaction_inst.imm;
-      dut_vifc_in.cb.src1 <= transaction_inst.src1;
-      dut_vifc_in.cb.src2 <= transaction_inst.src2;
-      dut_vifc_in.cb.dst <= transaction_inst.dst;
+      dut_vifc_in.reset <= input_transaction_inst.reset;
+      dut_vifc_in.instv <= input_transaction_inst.instv;
+      dut_vifc_in.opcode <= input_transaction_inst.opcode;
+      dut_vifc_in.imm <= input_transaction_inst.imm;
+      dut_vifc_in.src1 <= input_transaction_inst.src1;
+      dut_vifc_in.src2 <= input_transaction_inst.src2;
+      dut_vifc_in.dst <= input_transaction_inst.dst;
 
-      #`CYCLE_TIME // For controller DUT to update Stall signal
-      #`HALF_CYCLE_TIME // For Stall signal to stabelize
-      wait(dut_vifc_out.stalledx3==1'b0);
+      wait_for_no_stall();
 
       seq_item_port.item_done();
 
     end
     
+  endtask
+
+  virtual task wait_for_no_stall();
+/*
+      #`HALF_CYCLE_TIME // Wait for DUT input update in clock negedge
+      #`HALF_CYCLE_TIME // Wait for DUT output update in clock posedge
+      #`HALF_CYCLE_TIME // Wait for Stall signal to stabilize
+*/
+      #`CYCLE_TIME
+      wait(dut_vifc_out.stalledx3 === 1'b0);
+
   endtask
 
 endclass : driver_class

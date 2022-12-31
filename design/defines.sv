@@ -1,14 +1,16 @@
 `ifndef DEF
 `define DEF
-`define ALU_OP_AMT 8	                	// amount of operations ALU can perform
-`define ALU_SRC_TYPES 2	                	// amount of types of inputs into ALU (e.g. IMM,GPR)
-`define DATA_WIDTH 8	                	// size of data bus
-`define REG_AMT 4		                	// amount of regiters in RF
-`define READ_PORTS 2	                	// amount of read ports in RF
-`define WRITE_PORTS 1	                	// amount of write ports in RF
-`define PIPE_LEN 3  	                	// length of pipeline (in clock cycles)
-`define HALF_CYCLE_TIME 1  	                // time of half a cycle (in ns)
-`define CYCLE_TIME (`HALF_CYCLE_TIME*2)    	// clock cycle time (in ns)
+`define ALU_OP_AMT 8	                        // amount of operations ALU can perform
+`define ALU_SRC_TYPES 2	                        // amount of types of inputs into ALU (e.g. IMM,GPR)
+`define DATA_WIDTH 8	                        // size of data bus
+`define REG_AMT 4		                        // amount of regiters in RF
+`define READ_PORTS 2	                        // amount of read ports in RF
+`define WRITE_PORTS 1	                        // amount of write ports in RF
+`define PIPE_LEN 3  	                        // length of pipeline (in clock cycles)
+`define HALF_CYCLE_TIME 1  	                    // time of half a cycle (in ns)
+`define CYCLE_TIME (`HALF_CYCLE_TIME*2)         // clock cycle time (in ns)
+`define PIPE_DELAY (`PIPE_LEN*`CYCLE_TIME)      // length of pipeline (in ns)
+`define STALL_DELAY (`PIPE_DELAY-`CYCLE_TIME)   // length of stall (in ns)
 
 package definitions;
 typedef enum logic [$clog2(`ALU_OP_AMT)-1:0] {LD='b000,

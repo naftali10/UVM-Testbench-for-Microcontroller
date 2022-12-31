@@ -29,7 +29,7 @@ class test_class extends uvm_test;
     sequence_inst = sequence_class::type_id::create("sequence_inst");
     
     phase.raise_objection(this);
-    sequence_inst.start(env_inst.agent_inst.sequencer_inst);
+    sequence_inst.start(env_inst.active_agent_inst.sequencer_inst);
     phase.drop_objection(this);
     
   endtask: run_phase

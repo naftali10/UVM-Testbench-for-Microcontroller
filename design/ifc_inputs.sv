@@ -7,11 +7,7 @@ interface ifc_inputs (input bit clock);
   t_data imm;
   t_reg_name src1, src2;
   t_reg_name dst;
-  
-  clocking cb @(negedge clock);
-    output reset, instv, opcode, imm, src1, src2, dst;
-  endclocking
-  
+
   modport receiver (input clock,
                     input reset,
                     input instv,

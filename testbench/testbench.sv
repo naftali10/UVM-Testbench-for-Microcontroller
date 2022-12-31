@@ -19,7 +19,7 @@ module tb_top;
   
   // Interface instantiation
   ifc_inputs dut_ifc_in(clock);
-  ifc_outputs dut_ifc_out();
+  ifc_outputs dut_ifc_out(clock);
   
   // Building blocks instantiation
   Processor dut_inst(dut_ifc_in, dut_ifc_out);
