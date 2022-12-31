@@ -9,4 +9,5 @@ interface ifc_outputs (input bit clock);
   modport driver (output stalledx3,
                    output dataoutvx3,
                    output dataoutx3);
+
 endinterface

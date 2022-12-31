@@ -8,8 +8,9 @@ class reference_model_class extends uvm_component;
   
   // Instantiation
   uvm_analysis_imp#(input_transaction_class, reference_model_class) analysis_imp_inst;
-  uvm_blocking_get_imp#(output_transaction_class, reference_model_class) get_imp_inst;
-  output_transaction_class refmod_transaction_inst;
+  uvm_blocking_put_imp#(reset_transaction_class, reference_model_class) put_imp_inst;
+  uvm_nonblocking_get_imp#(output_transaction_class, reference_model_class) get_imp_inst;
+  output_transaction_class output_transaction_inst;
   event process_instruction;
   input_transaction_class tx_transfer;
   t_data regfile [`REG_AMT-1:0];
@@ -19,7 +20,8 @@ class reference_model_class extends uvm_component;
     super.build_phase(phase);
     analysis_imp_inst = new("analysis_imp_inst", this);
     get_imp_inst = new("get_imp_inst", this);
-    refmod_transaction_inst = output_transaction_class::type_id::create("refmod_transaction_inst");
+    put_imp_inst = new("put_imp_inst", this);
+    output_transaction_inst = output_transaction_class::type_id::create("output_transaction_inst");
     tx_transfer = input_transaction_class::type_id::create("tx_transfer");;
   endfunction: build_phase
 
@@ -30,9 +32,9 @@ class reference_model_class extends uvm_component;
       forever begin
         @process_instruction;
         if (tx_transfer.reset == 1'b1) begin
-          `uvm_info(get_name(), "Reset has been detected. Disabling fork.", UVM_NONE)
+          `uvm_info(get_name(), "Reset has been detected. Disabling fork.", UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
           disable fork;
-          refmod_transaction_inst.stalled = 1'b0;
+          output_transaction_inst.stalled = 1'b0;
         end
         else begin
           fork begin
@@ -44,19 +46,19 @@ class reference_model_class extends uvm_component;
             input_transaction_class tx = input_transaction_class::type_id::create("tx");
             tx.copy(tx_transfer);
 
-            if (!refmod_transaction_inst.stalled && tx.instv && instruction_is_legal(tx)) begin
-              `uvm_info(get_name(), "Sequence item received and. Starting processing:", UVM_NONE)
-              tx.print();
+            if (!output_transaction_inst.stalled && tx.instv && instruction_is_legal(tx)) begin
+              `uvm_info(get_name(), "Sequence item accepted. Starting processing:", UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
+              tx.print(); // FIXME - nkizner - 2022-12-31 - Delete after debug
               calc_res = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
               pipeline_wait(.is_stall(tx.opcode != OUT));
               // Write to register file
               if (tx.opcode != OUT) begin
-                `uvm_info(get_name(), $sformatf("%0d = %0d %0s %0d", calc_res, get_reg(tx.src1, tx.imm), tx.opcode.name(), get_reg(tx.src2, tx.imm)), UVM_NONE)
+                `uvm_info(get_name(), $sformatf("%0d = %0d %0s %0d", calc_res, get_reg(tx.src1, tx.imm), tx.opcode.name(), get_reg(tx.src2, tx.imm)), UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
                 write_regfile(calc_res, tx.dst);
-                print_regfile();
+                print_regfile(); // FIXME - nkizner - 2022-12-31 - Delete after debug
               end // if OUT
-              refmod_transaction_inst.dataout = calc_res;
-              refmod_transaction_inst.dataoutv = tx.opcode==OUT;
+              output_transaction_inst.dataout = calc_res;
+              output_transaction_inst.dataoutv = tx.opcode==OUT;
             end // if stalled instv
           end join_none
         end // else
@@ -70,6 +72,13 @@ class reference_model_class extends uvm_component;
     -> process_instruction;
   endfunction: write
   
+  virtual task put (input reset_transaction_class t);
+    if (t.reset === 1'b1) begin
+      tx_transfer.reset = 1'b1;
+      -> process_instruction;
+    end
+  endtask: put
+
   function t_data get_reg (t_reg_name source, t_data imm);
     case(source)
       R0: return regfile[0];
@@ -95,9 +104,9 @@ class reference_model_class extends uvm_component;
     integer id = $random%100;
     `uvm_info("Write delay", $sformatf("Start %0d", id), UVM_NONE)
 
-    refmod_transaction_inst.stalled = is_stall;
+    output_transaction_inst.stalled = is_stall;
     #(`STALL_DELAY + `HALF_CYCLE_TIME);
-    refmod_transaction_inst.stalled = 1'b0;
+    output_transaction_inst.stalled = 1'b0;
     #`CYCLE_TIME;
 
     `uvm_info("Write delay", $sformatf("Finish %0d", id), UVM_NONE)
@@ -138,7 +147,15 @@ class reference_model_class extends uvm_component;
     $display("%0d %0d %0d %0d", regfile[0], regfile[1], regfile[2], regfile[3]);
   endfunction
 
-  virtual function get(output_transaction_class t);
-  endfunction: get
+  virtual function bit try_get(output output_transaction_class t);
+    t = new();
+    t.stalled = output_transaction_inst.stalled;
+    t.dataoutv = output_transaction_inst.dataoutv;
+    t.dataout = output_transaction_inst.dataout;
+    return 1;
+  endfunction: try_get
+
+  virtual function bit can_get();
+  endfunction: can_get
 
 endclass: reference_model_class

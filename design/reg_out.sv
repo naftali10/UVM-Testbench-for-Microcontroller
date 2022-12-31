@@ -14,6 +14,8 @@ interface reg_out (input logic clock);
     dataoutx3 <= dataoutx2;
   end
   
+  // always @(clock) $display("%t clock: %b, stalled: %b, stalledx3: %b", $time, clock, stalled, stalledx3); // FIXME - nkizner - 2022-12-31 - Delete fater debugging
+  
   modport driver (output stalled,
                   output dataoutvx2,
                   output dataoutx2);

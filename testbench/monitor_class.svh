@@ -8,12 +8,18 @@ class input_monitor_class extends uvm_monitor;
 
   // Instantiation
   virtual ifc_inputs dut_vifc_in;
+  input_transaction_class input_transaction_inst;
+  reset_transaction_class reset_transaction_inst;
   uvm_analysis_port#(input_transaction_class) analysis_port_inst;
+  uvm_blocking_put_port#(reset_transaction_class) put_port_inst;
   
   // Build phase
   virtual function void build_phase (uvm_phase phase);
     super.build_phase(phase);
+    input_transaction_inst = input_transaction_class::type_id::create("input_transaction_inst");
+    reset_transaction_inst = reset_transaction_class::type_id::create("reset_transaction_inst");
     analysis_port_inst = new("analysis_port_inst",this);
+    put_port_inst = new("put_port_inst", this);
     if(!uvm_config_db#(virtual ifc_inputs)::get(this, "", "dut_vifc_in", dut_vifc_in))
       `uvm_fatal(get_type_name(), "Input DUT interface not found")
   endfunction: build_phase
@@ -21,19 +27,20 @@ class input_monitor_class extends uvm_monitor;
   // Run phase
   task run_phase(uvm_phase phase);
 
-    input_transaction_class transaction_inst = input_transaction_class::type_id::create("transaction_inst");
-
     forever begin
       @(posedge dut_vifc_in.clock);
-      transaction_inst.reset = dut_vifc_in.reset;
-      transaction_inst.instv = dut_vifc_in.instv;
-      transaction_inst.opcode = dut_vifc_in.opcode;
-      transaction_inst.imm = dut_vifc_in.imm;
-      transaction_inst.src1 = dut_vifc_in.src1;
-      transaction_inst.src2 = dut_vifc_in.src2;
-      transaction_inst.dst = dut_vifc_in.dst;
-      `uvm_info(get_name(), "Sending to reference model.", UVM_NONE)
-      analysis_port_inst.write(transaction_inst);
+      input_transaction_inst.reset = dut_vifc_in.reset;
+      input_transaction_inst.instv = dut_vifc_in.instv;
+      input_transaction_inst.opcode = dut_vifc_in.opcode;
+      input_transaction_inst.imm = dut_vifc_in.imm;
+      input_transaction_inst.src1 = dut_vifc_in.src1;
+      input_transaction_inst.src2 = dut_vifc_in.src2;
+      input_transaction_inst.dst = dut_vifc_in.dst;
+      `uvm_info(get_name(), "Sending to reference model", UVM_NONE)
+      analysis_port_inst.write(input_transaction_inst);
+      @(negedge dut_vifc_in.clock);
+      reset_transaction_inst.reset = dut_vifc_in.reset;
+      put_port_inst.put(reset_transaction_inst);
     end
 
   endtask: run_phase
