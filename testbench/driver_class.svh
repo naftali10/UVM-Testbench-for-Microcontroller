@@ -51,14 +51,8 @@ class driver_class extends uvm_driver#(input_transaction_class);
   endtask
 
   virtual task wait_for_no_stall();
-/*
-      #`HALF_CYCLE_TIME // Wait for DUT input update in clock negedge
-      #`HALF_CYCLE_TIME // Wait for DUT output update in clock posedge
-      #`HALF_CYCLE_TIME // Wait for Stall signal to stabilize
-*/
-      #`CYCLE_TIME
-      wait(dut_vifc_out.stalledx3 === 1'b0);
-
+      #`HALF_CYCLE_TIME // Give time for DUT to respond to new input values
+      wait(dut_vifc_out.stalled === 1'b0);
   endtask
 
 endclass : driver_class
