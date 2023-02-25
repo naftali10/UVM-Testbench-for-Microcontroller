@@ -22,7 +22,7 @@ class reference_model_class extends uvm_component;
     get_imp_inst = new("get_imp_inst", this);
     put_imp_inst = new("put_imp_inst", this);
     output_transaction_inst = output_transaction_class::type_id::create("output_transaction_inst");
-    tx_transfer = input_transaction_class::type_id::create("tx_transfer");;
+    tx_transfer = input_transaction_class::type_id::create("tx_transfer");
   endfunction: build_phase
 
   // Run phase
@@ -46,7 +46,7 @@ class reference_model_class extends uvm_component;
             input_transaction_class tx = input_transaction_class::type_id::create("tx");
             tx.copy(tx_transfer);
 
-            if (!output_transaction_inst.stalled && tx.instv && instruction_is_legal(tx)) begin
+            if (!output_transaction_inst.stalled && tx.instv && is_instruction_legal(tx)) begin
               `uvm_info(get_name(), "Sequence item accepted. Starting processing:", UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
               tx.print(); // FIXME - nkizner - 2022-12-31 - Delete after debug
               calc_res = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
@@ -56,7 +56,7 @@ class reference_model_class extends uvm_component;
                 `uvm_info(get_name(), $sformatf("%0d = %0d %0s %0d", calc_res, get_reg(tx.src1, tx.imm), tx.opcode.name(), get_reg(tx.src2, tx.imm)), UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
                 write_regfile(calc_res, tx.dst);
                 print_regfile(); // FIXME - nkizner - 2022-12-31 - Delete after debug
-              end // if OUT
+              end // if OUT // FIXME - nkizner - 2023-02-04 - Use else?
               output_transaction_inst.dataout = calc_res;
               output_transaction_inst.dataoutv = tx.opcode==OUT;
             end // if stalled instv
@@ -135,14 +135,6 @@ class reference_model_class extends uvm_component;
     endcase
   endfunction: write_regfile
 
-  function bit instruction_is_legal(input_transaction_class tx);
-
-    if (tx.opcode == LD && tx.src1 != IMM) return 1'b0;
-    if (tx.opcode == OUT && tx.src1 == IMM) return 1'b0;
-    return 1'b1;
-
-  endfunction: instruction_is_legal
-
   function void print_regfile();
     $display("%0d %0d %0d %0d", regfile[0], regfile[1], regfile[2], regfile[3]);
   endfunction
@@ -158,4 +150,18 @@ class reference_model_class extends uvm_component;
   virtual function bit can_get();
   endfunction: can_get
 
+  extern static function bit is_instruction_legal(input_transaction_class tx);
+
 endclass: reference_model_class
+
+
+static function bit reference_model_class::is_instruction_legal(input_transaction_class tx);
+
+  if (tx.reset == 1'b1) return 1'b1;
+  if (tx.opcode == LD && tx.src1 != IMM) return 1'b0;
+  if (tx.opcode == OUT && tx.src1 == IMM) return 1'b0;
+  if (tx.dst == IMM) return 1'b0;
+  return 1'b1;
+
+endfunction: is_instruction_legal
+

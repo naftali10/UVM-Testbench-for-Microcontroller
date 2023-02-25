@@ -14,8 +14,8 @@ class sequence_class extends uvm_sequence#(input_transaction_class);
     repeat (1) begin
       `uvm_do_with(input_transaction_inst, {reset==1'b1; instv==1'b1;})
       repeat (1) begin
-        `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=IMM;})
-        `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode!=LD; src1==IMM; dst!=IMM;})
+        `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst==R0;})
+        `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode!=LD; src1==R1; dst!=IMM;})
       end
     end
     `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1!=IMM; dst!=IMM;})
