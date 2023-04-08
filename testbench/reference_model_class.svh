@@ -46,7 +46,7 @@ class reference_model_class extends uvm_component;
             input_transaction_class tx = input_transaction_class::type_id::create("tx");
             tx.copy(tx_transfer);
 
-            if (!output_transaction_inst.stalled && tx.instv && is_instruction_legal(tx)) begin
+            if (!output_transaction_inst.stalled && tx.instv && tx.is_legal()) begin
               `uvm_info(get_name(), "Sequence item accepted. Starting processing:", UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
               tx.print(); // FIXME - nkizner - 2022-12-31 - Delete after debug
               calc_res = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
@@ -150,18 +150,5 @@ class reference_model_class extends uvm_component;
   virtual function bit can_get();
   endfunction: can_get
 
-  extern static function bit is_instruction_legal(input_transaction_class tx);
-
 endclass: reference_model_class
-
-
-static function bit reference_model_class::is_instruction_legal(input_transaction_class tx);
-
-  if (tx.reset == 1'b1) return 1'b1;
-  if (tx.opcode == LD && tx.src1 != IMM) return 1'b0;
-  if (tx.opcode == OUT && tx.src1 == IMM) return 1'b0;
-  if (tx.dst == IMM) return 1'b0;
-  return 1'b1;
-
-endfunction: is_instruction_legal
 

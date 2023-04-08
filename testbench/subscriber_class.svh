@@ -9,46 +9,51 @@ class subscriber_class extends uvm_subscriber#(input_transaction_class);
     uvm_analysis_export#(input_transaction_class) analysis_export_inst;
 	string coverage_sampeling_report = "\nList of coverage samples:\n";
 
-	function new (string name = "subscriber_class", uvm_component parent = null);
-
-		super.new(name, parent);
-        covergroup_container_inst = covergroup_container::type_id::create("covergroup_container_inst", this);
-        coverage_analyzer_inst = coverage_analyzer::type_id::create("coverage_analyzer_inst", this);
-        latest_txn = new();
-
-	endfunction: new
-    
-
-    virtual function void build_phase(uvm_phase phase);
-
-        super.build_phase(phase);
-        analysis_export_inst = new("analysis_export_inst", this);
-
-    endfunction: build_phase
-
-
-    virtual function void connect_phase (uvm_phase phase);
-
-        coverage_analyzer_inst.put_port_inst.connect(covergroup_container_inst.put_imp_inst);
-        analysis_export_inst.connect(this.analysis_export);
-        analysis_export_inst.connect(coverage_analyzer_inst.analysis_imp_inst);
-        
-    endfunction : connect_phase
-
-
-    virtual function void report_phase(uvm_phase phase);
-
-        super.report_phase(phase);
-        print_coverage_report();
-
-    endfunction
-  
+	extern function new (string name = "subscriber_class", uvm_component parent = null);
+    extern function void build_phase(uvm_phase phase);
+    extern function void connect_phase (uvm_phase phase);
+    extern function void report_phase(uvm_phase phase);
 
     extern function void write(input_transaction_class t);
 	extern function void add_txn_to_report(input_transaction_class input_txn);
 	extern function void print_coverage_report();
 
 endclass: subscriber_class
+
+
+function subscriber_class::new (string name = "subscriber_class", uvm_component parent = null);
+
+    super.new(name, parent);
+    covergroup_container_inst = covergroup_container::type_id::create("covergroup_container_inst", this);
+    coverage_analyzer_inst = coverage_analyzer::type_id::create("coverage_analyzer_inst", this);
+    latest_txn = new();
+
+endfunction: new
+
+
+function void subscriber_class::build_phase(uvm_phase phase);
+
+    super.build_phase(phase);
+    analysis_export_inst = new("analysis_export_inst", this);
+
+endfunction: build_phase
+
+
+function void subscriber_class::connect_phase (uvm_phase phase);
+
+    coverage_analyzer_inst.put_port_inst.connect(covergroup_container_inst.put_imp_inst);
+    analysis_export_inst.connect(this.analysis_export);
+    analysis_export_inst.connect(coverage_analyzer_inst.analysis_imp_inst);
+    
+endfunction : connect_phase
+
+
+function void subscriber_class::report_phase(uvm_phase phase);
+
+    super.report_phase(phase);
+    print_coverage_report();
+
+endfunction
 
 
 function void subscriber_class::write(input_transaction_class t);

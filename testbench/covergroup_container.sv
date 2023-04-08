@@ -2,14 +2,34 @@ class covergroup_container extends uvm_component;
 
 	`uvm_component_utils(covergroup_container)
 
-    uvm_blocking_put_imp#(coverage_transaction, covergroup_container) put_imp_inst;
+    uvm_blocking_put_imp#(coverage_transaction_class, covergroup_container) put_imp_inst;
 
     extern function new(string name = "covergroup_container", uvm_component parent = null);
     extern function void build_phase(uvm_phase phase);
-    extern task put (input coverage_transaction t);
+    extern task put (input coverage_transaction_class t);
 
-    covergroup covgrp with function sample (coverage_transaction coverage);
+    covergroup covgrp with function sample (coverage_transaction_class coverage);
 
+        coverpoint coverage.opcode;
+        coverpoint coverage.opcodes_used_as_valid_and_invalid{
+            wildcard bins _ld   = {8'b_????_???1};
+            wildcard bins _out  = {8'b_????_??1?};
+            wildcard bins _add  = {8'b_????_?1??};
+            wildcard bins _sub  = {8'b_????_1???};
+            wildcard bins _nand = {8'b_???1_????};
+            wildcard bins _nor  = {8'b_??1?_????};
+            wildcard bins _xor  = {8'b_?1??_????};
+            wildcard bins _shfl = {8'b_1???_????};
+        }
+        coverpoint coverage.illegal_instructions {
+            wildcard bins ld      = {3'b1??};
+            wildcard bins out     = {3'b?1?};
+            wildcard bins imm_dst = {3'b??1};
+        }
+
+        ops: coverpoint coverage.opcode {
+            bins all [] = {LD, OUT, ADD, SUB, NAND, NOR, XOR, SHFL};
+        }
         non_init_dst: coverpoint coverage.regs_used_as_dsts {
             wildcard bins r0 = {4'b0???};
             wildcard bins r1 = {4'b?0??};
@@ -42,9 +62,6 @@ class covergroup_container extends uvm_component;
             bins zero = {1'b0};
         }
         opcode: coverpoint coverage.opcode;
-        ops: coverpoint coverage.opcode {
-            bins all [] = {LD, OUT, ADD, SUB, NAND, NOR, XOR, SHFL};
-        }
         start_with_op: coverpoint coverage.opcode {
             wildcard bins _ld = (LD => 'b?);
             wildcard bins _out = (OUT => 'b?);
@@ -89,11 +106,6 @@ class covergroup_container extends uvm_component;
         }
         inv_ops: cross coverage.opcode, validity {
             ignore_bins val = binsof (validity.val);
-        }
-        illegal_instr : coverpoint coverage.illegal_instructions {
-            wildcard bins ld      = {3'b1??};
-            wildcard bins out     = {3'b?1?};
-            wildcard bins imm_dst = {3'b??1};
         }
         legal_instr: cross ops, validity, reset, src1, dst{
             ignore_bins illegal_ld = binsof (ops) intersect {LD} && !binsof (src1) intersect {IMM} && binsof (reset) intersect {1'b0} && binsof (validity.val);
@@ -146,7 +158,7 @@ function void covergroup_container::build_phase(uvm_phase phase);
 endfunction : build_phase
 
 
-task covergroup_container::put (input coverage_transaction t);
+task covergroup_container::put (input coverage_transaction_class t);
 
     covgrp.sample(t);
 
