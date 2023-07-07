@@ -24,8 +24,10 @@ class input_transaction_class extends uvm_sequence_item;
   `uvm_object_utils_end
 
   extern function bit is_legal();
+  extern function bit is_valid();
   extern function bit will_output();
   extern function bit will_writeback();
+  extern function bit will_reset();
 
 endclass: input_transaction_class
 
@@ -41,6 +43,13 @@ function bit input_transaction_class::is_legal();
 endfunction: is_legal
 
 
+function bit input_transaction_class::is_valid();
+
+    return this.instv == 1'b1;
+
+endfunction : is_valid
+
+
 function bit input_transaction_class::will_writeback();
 
     return this.is_legal() && this.instv == 1'b1 && this.reset == 1'b0 && this.opcode != OUT;
@@ -53,3 +62,10 @@ function bit input_transaction_class::will_output();
     return this.is_legal() && this.instv == 1'b1 && this.reset == 1'b0 && this.opcode == OUT;
 
 endfunction : will_output
+
+
+function bit input_transaction_class::will_reset();
+
+    return this.reset == 1'b1 && this.is_valid();
+
+endfunction : will_reset

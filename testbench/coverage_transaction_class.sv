@@ -8,7 +8,15 @@ class coverage_transaction_class extends input_transaction_class;
 
 	bit [7:0] opcodes_used_as_valid;
 	bit [7:0] opcodes_used_as_invalid;
-    bit [7:0] opcodes_used_as_valid_and_invalid;
+    bit [7:0] opcodes_used_as_both_valid_and_invalid; // FIXME - nkizner - 2023-07-07 - shouldn't the name be opcodes_used?
+
+    t_opcode opcode_of_last_legal_valid_instruction;
+    int cycles_since_last_legal_valid_instruction;
+    bit is_waiting_for_cancel;
+
+    bit [7:0] opcodes_cancelled_after_1_cycle;
+    bit [7:0] opcodes_cancelled_after_2_cycles;
+    bit [7:0] opcodes_cancelled_after_3_cycles;
 
     function new(string name = "");
         super.new(name);
@@ -22,10 +30,11 @@ class coverage_transaction_class extends input_transaction_class;
     extern function void mark_opcode_used_as_invalid (t_opcode opcode);
     extern function bit was_opcode_used_as_valid (t_opcode opcode);
     extern function bit was_opcode_used_as_invalid (t_opcode opcode);
-    extern function void mark_opcode_used_as_valid_and_invalid (t_opcode opcode);
+    extern function void mark_opcode_used_as_both_valid_and_invalid (t_opcode opcode);
     extern function void mark_reg_used_as_dst (t_reg_name reg_name);
     extern function void mark_reg_used_as_src_before_initiated (t_reg_name reg_name);
     extern function void mark_opcode_as_used_in_illegal_instruction (t_opcode opcode);
+    extern function void mark_instruction_cancel ();
 
 endclass: coverage_transaction_class
 
@@ -37,7 +46,7 @@ function void coverage_transaction_class::init_values();
 	illegal_instructions = 0;
     opcodes_used_as_valid = 0;
     opcodes_used_as_invalid = 0;
-    opcodes_used_as_valid_and_invalid = 0;
+    opcodes_used_as_both_valid_and_invalid = 0;
 
 endfunction : init_values
 
@@ -115,8 +124,20 @@ function bit coverage_transaction_class::was_opcode_used_as_invalid(t_opcode opc
 endfunction : was_opcode_used_as_invalid
 
 
-function void coverage_transaction_class::mark_opcode_used_as_valid_and_invalid(t_opcode opcode);
+function void coverage_transaction_class::mark_opcode_used_as_both_valid_and_invalid(t_opcode opcode);
 
-    opcodes_used_as_valid_and_invalid[opcode] = 1'b1;
+    opcodes_used_as_both_valid_and_invalid[opcode] = 1'b1;
 
-endfunction : mark_opcode_used_as_valid_and_invalid
+endfunction : mark_opcode_used_as_both_valid_and_invalid
+
+
+function void coverage_transaction_class::mark_instruction_cancel();
+
+    case (cycles_since_last_legal_valid_instruction)
+        1: opcodes_cancelled_after_1_cycle [opcode_of_last_legal_valid_instruction] = 1;
+        2: opcodes_cancelled_after_2_cycles[opcode_of_last_legal_valid_instruction] = 1;
+        3: opcodes_cancelled_after_3_cycles[opcode_of_last_legal_valid_instruction] = 1;
+        default:;
+    endcase
+
+endfunction : mark_instruction_cancel

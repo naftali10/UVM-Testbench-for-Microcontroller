@@ -10,8 +10,8 @@ class covergroup_container extends uvm_component;
 
     covergroup covgrp with function sample (coverage_transaction_class coverage);
 
-        coverpoint coverage.opcode;
-        coverpoint coverage.opcodes_used_as_valid_and_invalid{
+        opcode : coverpoint coverage.opcode;
+        opcodes_used_as_both_valid_and_invalid : coverpoint coverage.opcodes_used_as_both_valid_and_invalid{
             wildcard bins _ld   = {8'b_????_???1};
             wildcard bins _out  = {8'b_????_??1?};
             wildcard bins _add  = {8'b_????_?1??};
@@ -21,12 +21,11 @@ class covergroup_container extends uvm_component;
             wildcard bins _xor  = {8'b_?1??_????};
             wildcard bins _shfl = {8'b_1???_????};
         }
-        coverpoint coverage.illegal_instructions {
+        illegal_instructions : coverpoint coverage.illegal_instructions {
             wildcard bins ld      = {3'b1??};
             wildcard bins out     = {3'b?1?};
             wildcard bins imm_dst = {3'b??1};
         }
-
         ops: coverpoint coverage.opcode {
             bins all [] = {LD, OUT, ADD, SUB, NAND, NOR, XOR, SHFL};
         }
@@ -41,6 +40,36 @@ class covergroup_container extends uvm_component;
             wildcard bins r1 = {4'b?1??};
             wildcard bins r2 = {4'b??1?};
             wildcard bins r3 = {4'b???1};
+        }
+        opcodes_cancelled_after_1_cycle : coverpoint coverage.opcodes_cancelled_after_1_cycle {
+            wildcard bins _ld   = {8'b_????_???1};
+            wildcard bins _out  = {8'b_????_??1?};
+            wildcard bins _add  = {8'b_????_?1??};
+            wildcard bins _sub  = {8'b_????_1???};
+            wildcard bins _nand = {8'b_???1_????};
+            wildcard bins _nor  = {8'b_??1?_????};
+            wildcard bins _xor  = {8'b_?1??_????};
+            wildcard bins _shfl = {8'b_1???_????};
+        }
+        opcodes_cancelled_after_2_cycles : coverpoint coverage.opcodes_cancelled_after_2_cycles {
+            wildcard bins _ld   = {8'b_????_???1};
+            wildcard bins _out  = {8'b_????_??1?};
+            wildcard bins _add  = {8'b_????_?1??};
+            wildcard bins _sub  = {8'b_????_1???};
+            wildcard bins _nand = {8'b_???1_????};
+            wildcard bins _nor  = {8'b_??1?_????};
+            wildcard bins _xor  = {8'b_?1??_????};
+            wildcard bins _shfl = {8'b_1???_????};
+        }
+        opcodes_cancelled_after_3_cycles : coverpoint coverage.opcodes_cancelled_after_3_cycles {
+            wildcard bins _ld   = {8'b_????_???1};
+            wildcard bins _out  = {8'b_????_??1?};
+            wildcard bins _add  = {8'b_????_?1??};
+            wildcard bins _sub  = {8'b_????_1???};
+            wildcard bins _nand = {8'b_???1_????};
+            wildcard bins _nor  = {8'b_??1?_????};
+            wildcard bins _xor  = {8'b_?1??_????};
+            wildcard bins _shfl = {8'b_1???_????};
         }
         reset_seq: coverpoint coverage.reset{
             bins after1 = (1'b0 [*1] => 1'b1);
@@ -61,7 +90,6 @@ class covergroup_container extends uvm_component;
             bins one = {1'b1};
             bins zero = {1'b0};
         }
-        opcode: coverpoint coverage.opcode;
         start_with_op: coverpoint coverage.opcode {
             wildcard bins _ld = (LD => 'b?);
             wildcard bins _out = (OUT => 'b?);

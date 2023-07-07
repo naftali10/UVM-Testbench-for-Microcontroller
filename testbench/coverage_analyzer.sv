@@ -17,6 +17,7 @@ class coverage_analyzer extends uvm_component;
 	extern function void track_non_initiated_regs_used_as_src();
 	extern function void track_illegal_instructions();
 	extern function void track_opcode_validity();
+	extern function void track_legal_valid_instructions();
 
 endclass : coverage_analyzer
 
@@ -65,6 +66,7 @@ function void coverage_analyzer::analyze_txn_for_coverage();
     track_opcode_validity();
     track_non_initiated_regs_used_as_src();
     track_illegal_instructions();
+    track_legal_valid_instructions();
 
 endfunction : analyze_txn_for_coverage
 
@@ -88,7 +90,7 @@ endfunction : track_non_initiated_regs_used_as_src
 
 function void coverage_analyzer::track_illegal_instructions();
 
-    if (!input_txn.is_legal() && input_txn.instv)
+    if (!input_txn.is_legal() && input_txn.is_valid())
         coverage.mark_opcode_as_used_in_illegal_instruction(input_txn.opcode);
 
 endfunction : track_illegal_instructions
@@ -96,12 +98,34 @@ endfunction : track_illegal_instructions
 
 function void coverage_analyzer::track_opcode_validity();
 
-    if (input_txn.instv == 1'b1)
+    if (input_txn.is_valid())
         coverage.mark_opcode_used_as_valid(input_txn.opcode);
-    if (input_txn.instv == 1'b0)
+    else
         coverage.mark_opcode_used_as_invalid(input_txn.opcode);
 
     if (coverage.was_opcode_used_as_valid(input_txn.opcode) && coverage.was_opcode_used_as_invalid(input_txn.opcode))
-        coverage.mark_opcode_used_as_valid_and_invalid(input_txn.opcode);
+        coverage.mark_opcode_used_as_both_valid_and_invalid(input_txn.opcode);
 
 endfunction : track_opcode_validity
+
+
+function void coverage_analyzer::track_legal_valid_instructions();
+
+    if (coverage.is_waiting_for_cancel) begin
+        if (input_txn.will_reset()) begin
+            coverage.mark_instruction_cancel();
+            coverage.is_waiting_for_cancel = 0;
+        end
+        else begin
+            coverage.cycles_since_last_legal_valid_instruction ++;
+        end
+    end
+    else begin
+        if (input_txn.is_legal() && input_txn.is_valid()) begin
+            coverage.opcode_of_last_legal_valid_instruction = input_txn.opcode;
+            coverage.cycles_since_last_legal_valid_instruction = 0;
+            coverage.is_waiting_for_cancel = 1;
+        end
+    end
+
+endfunction : track_legal_valid_instructions

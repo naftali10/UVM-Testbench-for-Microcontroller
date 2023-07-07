@@ -79,18 +79,22 @@ endfunction : add_txn_to_report
 
 function void subscriber_class::print_coverage_report();
 
-    `uvm_info(get_name(), $sformatf({"\nCoverage Statistics:\n",
-                                "All operations = %0.2f %%\n",
-                                "Valid operations = %0.2f %%\n",
-                                "Invalid operations = %0.2f %%\n",
-                                "Illegal instructions = %0.2f %%\n"
-                                    },
-                                covergroup_container_inst.covgrp.opcode.get_coverage(),
-                                covergroup_container_inst.covgrp.val_ops.get_coverage(),
-                                covergroup_container_inst.covgrp.inv_ops.get_coverage(),
-                                covergroup_container_inst.covgrp.illegal_instr.get_coverage()
-                                ),
-                                UVM_NONE);
+    `uvm_info(get_name(), $sformatf(
+        {
+        "\nCoverage Statistics:\n",
+        "All operations = %0.2f %%\n",
+        "Valid operations = %0.2f %%\n",
+        "Invalid operations = %0.2f %%\n",
+        "Illegal instructions = %0.2f %%\n",
+        "opcodes cancelled after 1 cycle = %0.2f %%\n"
+        },
+        covergroup_container_inst.covgrp.opcode.get_coverage(),
+        covergroup_container_inst.covgrp.val_ops.get_coverage(),
+        covergroup_container_inst.covgrp.inv_ops.get_coverage(),
+        covergroup_container_inst.covgrp.illegal_instructions.get_coverage(),
+        covergroup_container_inst.covgrp.opcodes_cancelled_after_1_cycle.get_coverage()
+        ),
+        UVM_NONE);
     `uvm_info(get_name(), coverage_sampeling_report, UVM_NONE)
 
 endfunction : print_coverage_report
