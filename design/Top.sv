@@ -27,6 +27,6 @@ module Processor (ifc_inputs.receiver global_inputs,
                  .reg_out_(reg_out_),
                  .ifc_outputs_(global_outputs));
 
-  always @(global_inputs.clock) $display("time = %1t clock = %b stall %b", $time, global_inputs.clock, global_outputs.stalled); // FIXME - nkizner - 2022-12-31 - Delete after debugging
+  // always @(global_inputs.clock) $display("time = %1t clock = %b stall %b", $time, global_inputs.clock, global_outputs.stalled); // FIXME - nkizner - 2022-12-31 - Delete after debugging
   
 endmodule

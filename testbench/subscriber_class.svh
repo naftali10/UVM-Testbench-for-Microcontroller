@@ -65,14 +65,18 @@ endfunction : write
 
 function void subscriber_class::add_txn_to_report(input_transaction_class input_txn);
 
-    coverage_sampeling_report = {coverage_sampeling_report, $sformatf("reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \n",
+    coverage_sampeling_report = {coverage_sampeling_report, $sformatf(
+        "reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \t is_legal = %b \t is_waiting_for_cancel = %b \t cycles_since_last_legal_valid_instruction = %d \n",
         input_txn.reset,
         input_txn.instv,
         input_txn.opcode,
         input_txn.src1,
         input_txn.src2,
-        input_txn.dst)
-    };
+        input_txn.dst,
+        input_txn.is_legal(),
+        coverage_analyzer_inst.coverage.is_waiting_for_cancel,
+        coverage_analyzer_inst.coverage.cycles_since_last_legal_valid_instruction
+    )};
 
 endfunction : add_txn_to_report
 
@@ -86,13 +90,17 @@ function void subscriber_class::print_coverage_report();
         "Valid operations = %0.2f %%\n",
         "Invalid operations = %0.2f %%\n",
         "Illegal instructions = %0.2f %%\n",
-        "opcodes cancelled after 1 cycle = %0.2f %%\n"
+        "opcodes cancelled after 1 cycle = %0.2f %%\n",
+        "opcodes cancelled after 2 cycles = %0.2f %%\n",
+        "opcodes right after reset = %0.2f %%\n"
         },
         covergroup_container_inst.covgrp.opcode.get_coverage(),
         covergroup_container_inst.covgrp.val_ops.get_coverage(),
         covergroup_container_inst.covgrp.inv_ops.get_coverage(),
         covergroup_container_inst.covgrp.illegal_instructions.get_coverage(),
-        covergroup_container_inst.covgrp.opcodes_cancelled_after_1_cycle.get_coverage()
+        covergroup_container_inst.covgrp.opcodes_cancelled_after_1_cycle.get_coverage(),
+        covergroup_container_inst.covgrp.opcodes_cancelled_after_2_cycles.get_coverage(),
+        covergroup_container_inst.covgrp.opcodes_right_after_reset.get_coverage(),
         ),
         UVM_NONE);
     `uvm_info(get_name(), coverage_sampeling_report, UVM_NONE)

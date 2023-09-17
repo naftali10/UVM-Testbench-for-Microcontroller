@@ -61,7 +61,7 @@ class covergroup_container extends uvm_component;
             wildcard bins _xor  = {8'b_?1??_????};
             wildcard bins _shfl = {8'b_1???_????};
         }
-        opcodes_cancelled_after_3_cycles : coverpoint coverage.opcodes_cancelled_after_3_cycles {
+        opcodes_right_after_reset : coverpoint coverage.opcodes_right_after_reset {
             wildcard bins _ld   = {8'b_????_???1};
             wildcard bins _out  = {8'b_????_??1?};
             wildcard bins _add  = {8'b_????_?1??};
@@ -70,12 +70,6 @@ class covergroup_container extends uvm_component;
             wildcard bins _nor  = {8'b_??1?_????};
             wildcard bins _xor  = {8'b_?1??_????};
             wildcard bins _shfl = {8'b_1???_????};
-        }
-        reset_seq: coverpoint coverage.reset{
-            bins after1 = (1'b0 [*1] => 1'b1);
-            bins after2 = (1'b0 [*2] => 1'b1);
-            bins after3 = (1'b0 [*3] => 1'b1);
-            bins on_then_off = (1'b1 => 1'b0);
         }
         val_seq: coverpoint coverage.instv{
             bins two = (1'b1 [*2]);
@@ -140,29 +134,6 @@ class covergroup_container extends uvm_component;
             ignore_bins illegal_out = binsof (ops) intersect {OUT} && binsof (src1) intersect {IMM} && binsof (reset) intersect {1'b0} && binsof (validity.val);
             ignore_bins illegal_dst = binsof (dst.illegal) && binsof (reset) intersect {1'b0} && binsof (validity.val);
             bins all = binsof (ops.all);
-        }
-        in_flight_reset: cross val_seq, reset_seq, legal_instr {
-            bins reset_after_1 = binsof (reset_seq.after1) && binsof (val_seq.two);
-            bins reset_after_2 = binsof (reset_seq.after2) && binsof (val_seq.three);
-            bins reset_after_3 = binsof (reset_seq.after3) && binsof (val_seq.four);
-            ignore_bins not_synced_1 = binsof (reset_seq.after1) && !binsof (val_seq.two);
-            ignore_bins not_synced_2 = binsof (reset_seq.after2) && !binsof (val_seq.three);
-            ignore_bins not_synced_3 = binsof (reset_seq.after3) && !binsof (val_seq.four);
-            ignore_bins reset_on_then_off = binsof (reset_seq.on_then_off);
-        }
-        reset_right_after_ops: cross val_seq, reset_seq, legal_instr, start_with_op {
-            ignore_bins reset_on_then_off = binsof (reset_seq.on_then_off);
-            ignore_bins reset_after_2 = binsof (reset_seq.after2);
-            ignore_bins reset_after_3 = binsof (reset_seq.after3);
-            ignore_bins three_valid_ops = binsof (val_seq.three);
-            ignore_bins four_valid_ops = binsof (val_seq.four);
-        }
-        ops_right_after_reset: cross val_seq, reset_seq, legal_instr, end_with_op {
-            ignore_bins three_valid_ops = binsof (val_seq.three);
-            ignore_bins four_valid_ops = binsof (val_seq.four);
-            ignore_bins reset_after_1 = binsof (reset_seq.after1);
-            ignore_bins reset_after_2 = binsof (reset_seq.after2);
-            ignore_bins reset_after_3 = binsof (reset_seq.after3);
         }
 
     endgroup: covgrp
