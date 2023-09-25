@@ -29,17 +29,17 @@ class covergroup_container extends uvm_component;
         ops: coverpoint coverage.opcode {
             bins all [] = {LD, OUT, ADD, SUB, NAND, NOR, XOR, SHFL};
         }
-        non_init_dst: coverpoint coverage.regs_used_as_dsts {
-            wildcard bins r0 = {4'b0???};
-            wildcard bins r1 = {4'b?0??};
-            wildcard bins r2 = {4'b??0?};
-            wildcard bins r3 = {4'b???0};
+        regs_used_as_src_before_initiated: coverpoint coverage.regs_used_as_src_before_initiated {
+            wildcard bins r0 = {4'b???1};
+            wildcard bins r1 = {4'b??1?};
+            wildcard bins r2 = {4'b?1??};
+            wildcard bins r3 = {4'b1???};
         }
-        coverpoint coverage.regs_used_as_src_before_initiated {
-            wildcard bins r0 = {4'b1???};
-            wildcard bins r1 = {4'b?1??};
-            wildcard bins r2 = {4'b??1?};
-            wildcard bins r3 = {4'b???1};
+        regs_used_for_output: coverpoint coverage.regs_used_for_output {
+            wildcard bins r0 = {4'b???1};
+            wildcard bins r1 = {4'b??1?};
+            wildcard bins r2 = {4'b?1??};
+            wildcard bins r3 = {4'b1???};
         }
         opcodes_cancelled_after_1_cycle : coverpoint coverage.opcodes_cancelled_after_1_cycle {
             wildcard bins _ld   = {8'b_????_???1};
@@ -71,10 +71,8 @@ class covergroup_container extends uvm_component;
             wildcard bins _xor  = {8'b_?1??_????};
             wildcard bins _shfl = {8'b_1???_????};
         }
-        val_seq: coverpoint coverage.instv{
-            bins two = (1'b1 [*2]);
-            bins three = (1'b1 [*3]);
-            bins four = (1'b1 [*4]);
+        imm_used_as_dst : coverpoint coverage.imm_used_as_dst {
+            bins imm_used_as_dst = {1'b1};
         }
         validity: coverpoint coverage.instv {
             bins val = {1'b1};

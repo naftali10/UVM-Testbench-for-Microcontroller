@@ -3,6 +3,7 @@ class coverage_transaction_class extends input_transaction_class;
     `uvm_object_utils(coverage_transaction_class)
     
 	bit [`REG_AMT-1:0] regs_used_as_dsts;
+	bit [`REG_AMT-1:0] regs_used_for_output;
 	bit [`REG_AMT-1:0] regs_used_as_src_before_initiated;
 	bit [2:0] illegal_instructions;
 
@@ -20,6 +21,8 @@ class coverage_transaction_class extends input_transaction_class;
 
     bit [7:0] opcodes_right_after_reset;
 
+    bit imm_used_as_dst;
+
     function new(string name = "");
         super.new(name);
         init_values();
@@ -35,6 +38,11 @@ class coverage_transaction_class extends input_transaction_class;
         opcodes_used_as_invalid = 0;
         opcodes_used_as_both_valid_and_invalid = 0;
         last_instruction_is_reset = 0;
+        opcodes_cancelled_after_1_cycle = 0;
+        opcodes_cancelled_after_2_cycles = 0;
+        opcodes_right_after_reset = 0;
+        regs_used_as_dsts = 0;
+        imm_used_as_dst = 0;
 
     endfunction : init_values
 
@@ -132,9 +140,15 @@ class coverage_transaction_class extends input_transaction_class;
     
     function void mark_legal_valid_instructions_after_reset(t_opcode opcode);
 
-        opcodes_right_after_reset[opcode] = 1;
+        opcodes_right_after_reset[opcode] = 1'b1;
 
     endfunction : mark_legal_valid_instructions_after_reset
 
+
+    function void mark_regs_used_for_output(t_reg_name reg_name);
+
+        regs_used_for_output[reg_name] = 1'b1;
+
+    endfunction : mark_regs_used_for_output
 
 endclass: coverage_transaction_class

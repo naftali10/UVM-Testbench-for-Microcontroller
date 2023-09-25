@@ -55,6 +55,8 @@ class coverage_analyzer extends uvm_component;
         track_illegal_instructions();
         track_legal_valid_instructions_cancel();
         track_legal_valid_instructions_after_reset();
+        track_regs_used_for_output();
+        track_imm_used_as_dst();
 
     endfunction : analyze_txn_for_coverage
 
@@ -65,11 +67,10 @@ class coverage_analyzer extends uvm_component;
             
             if (!coverage.was_reg_used_as_dst(input_txn.src1))
                 coverage.mark_reg_used_as_src_before_initiated(input_txn.src1);
-            if (!coverage.was_reg_used_as_dst(input_txn.src2))
+            if (input_txn.uses_src2() && !coverage.was_reg_used_as_dst(input_txn.src2))
                 coverage.mark_reg_used_as_src_before_initiated(input_txn.src2);
 
-            coverage.mark_reg_used_as_dst(input_txn.src1);
-            coverage.mark_reg_used_as_dst(input_txn.src2);
+            coverage.mark_reg_used_as_dst(input_txn.dst);
 
         end
 
@@ -133,5 +134,21 @@ class coverage_analyzer extends uvm_component;
         end
 
     endfunction : track_legal_valid_instructions_after_reset
+
+
+    function void track_regs_used_for_output();
+
+        if (input_txn.will_output)
+            coverage.mark_regs_used_for_output(input_txn.src1);
+
+    endfunction : track_regs_used_for_output
+
+
+    function void track_imm_used_as_dst();
+
+        if (input_txn.dst == IMM && input_txn.is_valid() && !input_txn.will_reset())
+            coverage.imm_used_as_dst = 1'b1;
+
+    endfunction : track_imm_used_as_dst
 
 endclass : coverage_analyzer

@@ -23,49 +23,50 @@ class input_transaction_class extends uvm_sequence_item;
     `uvm_field_enum (t_reg_name, dst, UVM_ALL_ON)
   `uvm_object_utils_end
 
-  extern function bit is_legal();
-  extern function bit is_valid();
-  extern function bit will_output();
-  extern function bit will_writeback();
-  extern function bit will_reset();
+
+    function bit is_legal();
+
+        if (this.reset == 1'b1) return 1'b1;
+        if (this.opcode == LD && this.src1 != IMM) return 1'b0;
+        if (this.opcode == OUT && this.src1 == IMM) return 1'b0;
+        if (this.dst == IMM) return 1'b0;
+        return 1'b1;
+
+    endfunction: is_legal
+
+
+    function bit is_valid();
+
+        return this.instv == 1'b1;
+
+    endfunction : is_valid
+
+
+    function bit will_writeback();
+
+        return this.is_legal() && this.instv == 1'b1 && this.reset == 1'b0 && this.opcode != OUT;
+
+    endfunction : will_writeback
+
+
+    function bit will_output();
+
+        return this.is_legal() && this.instv == 1'b1 && this.reset == 1'b0 && this.opcode == OUT;
+
+    endfunction : will_output
+
+
+    function bit will_reset();
+
+        return this.reset == 1'b1 && this.is_valid();
+
+    endfunction : will_reset
+
+
+    function bit uses_src2();
+
+        return this.opcode != LD && this.opcode != OUT;
+
+    endfunction : uses_src2
 
 endclass: input_transaction_class
-
-
-function bit input_transaction_class::is_legal();
-
-  if (this.reset == 1'b1) return 1'b1;
-  if (this.opcode == LD && this.src1 != IMM) return 1'b0;
-  if (this.opcode == OUT && this.src1 == IMM) return 1'b0;
-  if (this.dst == IMM) return 1'b0;
-  return 1'b1;
-
-endfunction: is_legal
-
-
-function bit input_transaction_class::is_valid();
-
-    return this.instv == 1'b1;
-
-endfunction : is_valid
-
-
-function bit input_transaction_class::will_writeback();
-
-    return this.is_legal() && this.instv == 1'b1 && this.reset == 1'b0 && this.opcode != OUT;
-
-endfunction : will_writeback
-
-
-function bit input_transaction_class::will_output();
-
-    return this.is_legal() && this.instv == 1'b1 && this.reset == 1'b0 && this.opcode == OUT;
-
-endfunction : will_output
-
-
-function bit input_transaction_class::will_reset();
-
-    return this.reset == 1'b1 && this.is_valid();
-
-endfunction : will_reset
