@@ -5,11 +5,9 @@
 //		 Includes a reset mux.
 
 module WriteBack (input logic internal_reset,
-                  input logic stalled,
                   reg_EXtoWB.receiver reg_EXtoWB_,
                   reg_out.driver reg_out_,
                   ifc_WB.driver ifc_WB_);
-  assign reg_out_.stalled = stalled;
   assign reg_out_.dataoutvx2 = internal_reset?0:reg_EXtoWB_.dataoutvx2;
   assign reg_out_.dataoutx2 = reg_EXtoWB_.dataoutx2;
   

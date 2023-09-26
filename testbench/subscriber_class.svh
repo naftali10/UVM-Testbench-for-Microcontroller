@@ -1,44 +1,114 @@
 class subscriber_class extends uvm_subscriber#(input_transaction_class);
   
-  `uvm_component_utils(subscriber_class)
+	`uvm_component_utils(subscriber_class)
   
-  // Declarations
-  logic instv;
-  t_opcode opcode;
-  t_data imm;
-  t_reg_name src1, src2;
-  t_reg_name dst;
-  
-  // Coverage
-  covergroup covergroup_type;
-    coverpoint instv;
-    coverpoint opcode;
-    coverpoint imm;
-    coverpoint src1;
-    coverpoint src2;
-    coverpoint dst;
-  endgroup: covergroup_type
-  
-  function new (string name = "subscriber_class", uvm_component parent = null);
+
+    input_transaction_class latest_txn;
+    covergroup_container covergroup_container_inst;
+    coverage_analyzer coverage_analyzer_inst;
+    uvm_analysis_export#(input_transaction_class) analysis_export_inst;
+	string coverage_sampeling_report = "\nList of coverage samples:\n";
+
+	extern function new (string name = "subscriber_class", uvm_component parent = null);
+    extern function void build_phase(uvm_phase phase);
+    extern function void connect_phase (uvm_phase phase);
+    extern function void report_phase(uvm_phase phase);
+
+    extern function void write(input_transaction_class t);
+	extern function void add_txn_to_report(input_transaction_class input_txn);
+	extern function void print_coverage_report();
+
+endclass: subscriber_class
+
+
+function subscriber_class::new (string name = "subscriber_class", uvm_component parent = null);
+
     super.new(name, parent);
-    covergroup_type = new();
-  endfunction: new
+    covergroup_container_inst = covergroup_container::type_id::create("covergroup_container_inst", this);
+    coverage_analyzer_inst = coverage_analyzer::type_id::create("coverage_analyzer_inst", this);
+    latest_txn = new();
+
+endfunction: new
+
+
+function void subscriber_class::build_phase(uvm_phase phase);
+
+    super.build_phase(phase);
+    analysis_export_inst = new("analysis_export_inst", this);
+
+endfunction: build_phase
+
+
+function void subscriber_class::connect_phase (uvm_phase phase);
+
+    coverage_analyzer_inst.put_port_inst.connect(covergroup_container_inst.put_imp_inst);
+    analysis_export_inst.connect(this.analysis_export);
+    analysis_export_inst.connect(coverage_analyzer_inst.analysis_imp_inst);
     
-  // Write
-  function void write (input_transaction_class t);
-    instv = t.instv;
-    opcode = t.opcode;
-    imm = t.imm;
-    src1 = t.src1;
-    src2 = t.src2;
-    dst = t.dst;
-    covergroup_type.sample();
-  endfunction: write
-  
-  // Report phase
-  virtual function void report_phase(uvm_phase phase);
+endfunction : connect_phase
+
+
+function void subscriber_class::report_phase(uvm_phase phase);
+
     super.report_phase(phase);
-    $display("Coverage = %0.2f %%", covergroup_type.imm.get_coverage());
-  endfunction
-  
-endclass
+    print_coverage_report();
+
+endfunction
+
+
+function void subscriber_class::write(input_transaction_class t);
+
+    add_txn_to_report(t);
+
+endfunction : write
+
+
+function void subscriber_class::add_txn_to_report(input_transaction_class input_txn);
+
+    coverage_sampeling_report = {coverage_sampeling_report, $sformatf(
+        "reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \t is_legal = %b \t will_writeback = %b \t will_output = %b \n",
+        input_txn.reset,
+        input_txn.instv,
+        input_txn.opcode,
+        input_txn.src1,
+        input_txn.src2,
+        input_txn.dst,
+        input_txn.is_legal(),
+        input_txn.will_writeback(),
+        input_txn.will_output()
+    )};
+
+endfunction : add_txn_to_report
+
+
+function void subscriber_class::print_coverage_report();
+
+    `uvm_info(get_name(), $sformatf(
+        {
+        "\nCoverage Statistics:\n",
+        "All operations = %0.2f %%\n",
+        "Valid operations = %0.2f %%\n",
+        "Invalid operations = %0.2f %%\n",
+        "Illegal instructions = %0.2f %%\n",
+        "Opcodes cancelled after 1 cycle = %0.2f %%\n",
+        "Opcodes cancelled after 2 cycles = %0.2f %%\n",
+        "Opcodes right after reset = %0.2f %%\n",
+        "Registers used as sources while having X value = %0.2f %%\n",
+        "Registers used for output = %0.2f %%\n",
+        "Tried to use IMM as destination = %0.2f %%\n"
+        },
+        covergroup_container_inst.covgrp.opcode.get_coverage(),
+        covergroup_container_inst.covgrp.val_ops.get_coverage(),
+        covergroup_container_inst.covgrp.inv_ops.get_coverage(),
+        covergroup_container_inst.covgrp.illegal_instructions.get_coverage(),
+        covergroup_container_inst.covgrp.opcodes_cancelled_after_1_cycle.get_coverage(),
+        covergroup_container_inst.covgrp.opcodes_cancelled_after_2_cycles.get_coverage(),
+        covergroup_container_inst.covgrp.opcodes_right_after_reset.get_coverage(),
+        covergroup_container_inst.covgrp.regs_used_as_src_before_initiated.get_coverage(),
+        covergroup_container_inst.covgrp.regs_used_for_output.get_coverage(),
+        covergroup_container_inst.covgrp.imm_used_as_dst.get_coverage(),
+        ),
+        UVM_NONE);
+    `uvm_info(get_name(), coverage_sampeling_report, UVM_NONE)
+
+endfunction : print_coverage_report

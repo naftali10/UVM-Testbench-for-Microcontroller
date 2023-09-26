@@ -13,8 +13,6 @@ class input_transaction_class extends uvm_sequence_item;
   rand t_reg_name src1, src2;
   rand t_reg_name dst;
   
-  constraint no_write_to_imm {dst != IMM;}
-
   `uvm_object_utils_begin(input_transaction_class)
     `uvm_field_int (reset, UVM_ALL_ON)
     `uvm_field_int (instv, UVM_ALL_ON)
