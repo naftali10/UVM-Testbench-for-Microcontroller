@@ -1,0 +1,53 @@
+@startuml
+!pragma teoz true
+
+box Testbench
+
+box DUT #LightBlue
+participant Input_IFC
+participant Output_IFC
+end box
+
+box Test
+box Environment
+
+box Active_Agent #IndianRed
+participant Sequencer
+participant Input_Monitor
+participant Driver
+end box
+
+box Subscriber #Gold
+participant Covergroup_Container
+participant Coverage_Analyzer
+end box
+
+box Passive_Agent #GreenYellow
+participant Output_Monitor
+end box
+
+box Scoreboard #Aquamarine
+participant Reference_Model
+participant Comparator
+end box
+
+end box
+end box
+end box
+
+Sequencer -> Driver: TLM <<sequence>>
+Input_IFC <- Driver: Interface wiggle @clock posedge
+Input_IFC -> Input_Monitor: Interface wiggle @clock posedge
+
+Input_Monitor -> Reference_Model : TLM Analysis Port <<input_transaction>>
+Input_Monitor -> Coverage_Analyzer : TLM Analysis Port <<input_transaction>>
+Coverage_Analyzer -> Covergroup_Container : TLM put <<coverage_transaction>>
+
+Input_IFC -> Input_Monitor: Reset wire wiggle @clock negedge
+Input_Monitor -> Reference_Model : TLM put <<reset_transaction>>
+
+Output_IFC -> Output_Monitor: Interface wiggle @clock negedge
+Output_Monitor -> Comparator: TLM put <<output_transaction>>
+
+Reference_Model -> Comparator : TLM get <output_transaction>>
+@enduml
