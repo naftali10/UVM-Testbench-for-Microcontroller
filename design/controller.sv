@@ -25,7 +25,7 @@ module controller (
     state = reset?OP:next_state;
   
   always_comb begin
-    
+
     // Default values for outputs
     internal_reset = 0;
     clock_gate = 1;
@@ -37,96 +37,71 @@ module controller (
     stalled = 0;
     next_state = OP;
 
-      if (reset) begin
-        internal_reset = 1;
-        wr_en = 0;
-        dataoutv = 0;
-        stalled = 0;
-      end
-      else begin
-        case (state)
-          
-          OP: begin
-            if (~instv) begin : invalid_instruction
-              next_state = OP;
-              internal_reset = 0;
-              wr_en = 0;
-              dataoutv = 0;
-              stalled = 0;
-            end : invalid_instruction
-            else begin : valid_instruction
-              case (opcode)
-                LD: begin
-                  if (src1==IMM) begin
-                    next_state = STALL_EX;
-                    internal_reset = 0;
-                    ALUsrc1 = takeIMM;
-                    ALUop = LD;
-                    wr_en = 1;
-                    dataoutv = 0;
-                    stalled = 1;
-                  end
-                  else begin // error: LD without immediate value
-                    next_state = OP;
-                    internal_reset = 0;
-                    wr_en = 0;
-                    dataoutv = 0;
-                    stalled = 0;
-                  end
-                end
-                OUT: begin
-                  if (src1==R0 || src1==R1 || src1==R2 || src1==R3) begin
-                    next_state = STALL_EX;
-                    internal_reset = 0;
-                    ALUsrc1 = takeGPR;
-                    ALUop = OUT;
-                    wr_en = 0;
-                    dataoutv = 1;
-                    stalled = 1;
-                  end
-                  else begin // error: OUT without GPR
-                    next_state = OP;
-                    internal_reset = 0;
-                    wr_en = 0;
-                    dataoutv = 0;
-                    stalled = 0;
-                  end
-                end
-                ADD, SUB, NAND, NOR, XOR, SHFL: begin
-                  next_state = STALL_EX;
-                  internal_reset = 0;
-                  ALUop = opcode;
-                  wr_en = 1;
-                  dataoutv = 0;
-                  stalled = 1;
-                  case (src1)
-                    R0,R1,R2,R3: ALUsrc1 = takeGPR;
-                    IMM: ALUsrc1 = takeIMM;
-                  endcase
-                  case (src2)
-                    R0,R1,R2,R3: ALUsrc2 = takeGPR;
-                    IMM: ALUsrc2 = takeIMM;
-                  endcase
-                end
-              endcase
-            end: valid_instruction
-          end
-              
-          STALL_EX: begin
-            next_state = STALL_WB;
-            internal_reset = 0;
-            wr_en = 0;
-            dataoutv = 0;
-            stalled = 1;
-          end
-          STALL_WB: begin
+    if (reset) begin
+      internal_reset = 1;
+    end
+    else begin
+
+      case (state)
+        
+        OP: begin
+          if (~instv) begin : invalid_instruction
             next_state = OP;
-            internal_reset = 0;
-            wr_en = 0;
-            dataoutv = 0;
-            stalled = 0;
-          end
-        endcase
+          end : invalid_instruction
+          else begin : valid_instruction
+            case (opcode)
+              LD: begin
+                if (src1==IMM) begin
+                  next_state = STALL_EX;
+                  ALUsrc1 = takeIMM;
+                  ALUop = LD;
+                  wr_en = 1;
+                end
+                else begin : invalid_LD
+                  next_state = OP;
+                end
+              end
+              OUT: begin
+                if (src1==R0 || src1==R1 || src1==R2 || src1==R3) begin
+                  next_state = STALL_EX;
+                  ALUsrc1 = takeGPR;
+                  ALUop = OUT;
+                  dataoutv = 1;
+                end
+                else begin : invalid_OUT
+                  next_state = OP;
+                end
+              end
+              ADD, SUB, NAND, NOR, XOR, SHFL: begin
+                next_state = STALL_EX;
+                ALUop = opcode;
+                wr_en = 1;
+                dataoutv = 0;
+                case (src1)
+                  R0,R1,R2,R3: ALUsrc1 = takeGPR;
+                  IMM: ALUsrc1 = takeIMM;
+                endcase
+                case (src2)
+                  R0,R1,R2,R3: ALUsrc2 = takeGPR;
+                  IMM: ALUsrc2 = takeIMM;
+                endcase
+              end
+            endcase
+          end: valid_instruction
+        end
+
+        STALL_EX: begin
+          next_state = STALL_WB;
+        end
+
+        STALL_WB: begin
+          next_state = OP;
+        end
+
+      endcase
+
+      stalled = (next_state == STALL_EX || next_state == STALL_WB);
+
     end
   end
 endmodule

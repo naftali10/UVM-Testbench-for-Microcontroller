@@ -66,7 +66,8 @@ endfunction : write
 function void subscriber_class::add_txn_to_report(input_transaction_class input_txn);
 
     coverage_sampeling_report = {coverage_sampeling_report, $sformatf(
-        "reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \t imm = %h \t is_legal = %b \t will_writeback = %b \t will_output = %b \n",
+        "time = %0t \t reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \t imm = %h \t is_legal = %b \t will_writeback = %b \t will_output = %b \n",
+        $time,
         input_txn.reset,
         input_txn.instv,
         input_txn.opcode,
