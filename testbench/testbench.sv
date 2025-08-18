@@ -4,7 +4,7 @@ import uvm_pkg::*;
 
 `include "uvm_macros.svh"
 `include "tb_pkg.svh"
-`include "design.sv"
+// `include "design.sv"  // Commented for EDA Playground compatibility
 
 module tb_top;
   

@@ -66,13 +66,14 @@ endfunction : write
 function void subscriber_class::add_txn_to_report(input_transaction_class input_txn);
 
     coverage_sampeling_report = {coverage_sampeling_report, $sformatf(
-        "reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \t is_legal = %b \t will_writeback = %b \t will_output = %b \n",
+        "reset = %b \t instv = %b \t opcode = %s \t src1 = %s \t src2 = %s \t dst = %s \t imm = %d \t is_legal = %b \t will_writeback = %b \t will_output = %b \n",
         input_txn.reset,
         input_txn.instv,
         input_txn.opcode,
         input_txn.src1,
         input_txn.src2,
         input_txn.dst,
+        input_txn.imm,
         input_txn.is_legal(),
         input_txn.will_writeback(),
         input_txn.will_output()
