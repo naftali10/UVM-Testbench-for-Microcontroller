@@ -22,6 +22,7 @@ typedef enum logic [$clog2(`ALU_OP_AMT)-1:0] {LD='b000,
                                               XOR='b110,
                                               SHFL='b111} t_opcode;
 typedef enum logic [$clog2(`ALU_SRC_TYPES)-1:0] {takeGPR,takeIMM} t_ALUsrc_ctrl;
+typedef enum logic [$clog2(`ALU_SRC_TYPES)-1:0] {toGPR,  toIMM}   t_ALUdst_ctrl;
 typedef logic [`DATA_WIDTH-1:0] t_data;
 typedef enum logic [$clog2(`REG_AMT+1)-1:0] {R0='b000,
                                            	 R1='b001,
