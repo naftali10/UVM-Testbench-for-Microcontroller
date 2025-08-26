@@ -26,10 +26,18 @@ class input_transaction_class extends uvm_sequence_item;
 
     function bit is_legal();
 
-        if (this.reset == 1'b1) return 1'b1;
-        if (this.opcode == LD && this.src1 != IMM) return 1'b0;
+        if (this.reset  == 1'b1) return 1'b1;
+        if (this.opcode == LD  && this.src1 != IMM) return 1'b0;
         if (this.opcode == OUT && this.src1 == IMM) return 1'b0;
-        if (this.dst == IMM) return 1'b0;
+        if (this.dst    == IMM) return 1'b0;
+        if ((^this.reset  === 1'bx) ||
+            (^this.instv  === 1'bx) ||
+            (^this.opcode === 1'bx) ||
+            (^this.imm    === 1'bx) ||
+            (^this.src1   === 1'bx) ||
+            (^this.src2   === 1'bx) ||
+            (^this.dst    === 1'bx)
+        ) return 1'b0;
         return 1'b1;
 
     endfunction: is_legal
