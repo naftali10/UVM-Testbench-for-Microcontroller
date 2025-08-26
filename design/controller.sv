@@ -27,97 +27,7 @@ module controller (
   
   always_ff @(posedge clock)
     state = reset?OP:next_state;
-  always_comb begin
 
-    // Default values for outputs
-    internal_reset = 0;
-    clk_en_reg_IDtoEX = 1;
-    ALUsrc1 = takeGPR;
-    ALUsrc2 = takeGPR;
-    ALUop = LD;
-    wr_en = 0;
-    dataoutv = 0;
-    stalled = 0;
-    next_state = OP;
-
-    if (reset) begin
-      internal_reset = 1;
-      clk_en_reg_IDtoEX = 0;
-    end
-    else begin
-
-      case (state)
-        
-        OP: begin
-          if (~instv) begin : invalid_instruction
-            next_state = OP;
-            clk_en_reg_IDtoEX = 0;
-          end : invalid_instruction
-          else begin : valid_instruction
-            case (opcode)
-              LD: begin
-                if (src1==IMM && dst!=IMM) begin : valid_LD
-                  next_state = STALL_EX;
-                  ALUsrc1 = takeIMM;
-                  ALUop = LD;
-                  wr_en = 1;
-                end
-                else begin : invalid_LD
-                  next_state = OP;
-                  clk_en_reg_IDtoEX = 0;
-                end
-              end
-              OUT: begin
-                if (src1==R0 || src1==R1 || src1==R2 || src1==R3) begin : valid_OUT
-                  next_state = STALL_EX;
-                  ALUsrc1 = takeGPR;
-                  ALUop = OUT;
-                  dataoutv = 1;
-                end
-                else begin : invalid_OUT
-                  next_state = OP;
-                  clk_en_reg_IDtoEX = 0;
-                end
-              end
-              ADD, SUB, NAND, NOR, XOR, SHFL: begin
-                if (dst==IMM) begin : invalid_ALU
-                  next_state = OP;
-                  clk_en_reg_IDtoEX = 0;
-                end
-                else begin : valid_ALU
-                  next_state = STALL_EX;
-                  ALUop = opcode;
-                  wr_en = 1;
-                  dataoutv = 0;
-                  case (src1)
-                    R0,R1,R2,R3: ALUsrc1 = takeGPR;
-                    IMM: ALUsrc1 = takeIMM;
-                  endcase
-                  case (src2)
-                    R0,R1,R2,R3: ALUsrc2 = takeGPR;
-                    IMM: ALUsrc2 = takeIMM;
-                  endcase
-                end
-              end
-            endcase
-          end: valid_instruction
-        end
-
-        STALL_EX: begin
-          next_state = STALL_WB;
-        end
-
-        STALL_WB: begin
-          next_state = OP;
-        end
-
-      endcase
-
-      stalled = (next_state == STALL_EX || next_state == STALL_WB);
-
-    end
-  end
-/*
 always_comb begin
 
   // Default values for outputs
@@ -131,51 +41,53 @@ always_comb begin
   stalled = 0;
   next_state = OP;
 
+  // Determine variables for Case statement
   src1_type = src1==IMM ? takeIMM : takeGPR;
   src2_type = src2==IMM ? takeIMM : takeGPR;
-  dst_type =  dst ==IMM ? toIMM   : toGPR;
+  dst_type  = dst ==IMM ? toIMM   : toGPR;
+  opcode_type = (opcode==LD) ? LOAD : (opcode==OUT) ? OUTP : ALU;
 
   case 
     (
     {reset, instv, state, opcode_type, src1_type, dst_type}
     ) inside
-    {1,     ?,     ?,     ?,           ?,         ?       }: begin : external_reset
+    {1'b1,  1'b?,  32'b?, 32'b?,       1'b?,      1'b?    }: begin : external_reset
       internal_reset = 1;
       clk_en_reg_IDtoEX = 0;
     end
-    {0,     0,     ?,     ?,           ?,         ?       }: begin : invalid_instruction
+    {1'b0,  1'b0,  32'b?, 32'b?,       1'b?,      1'b?    }: begin : invalid_instruction
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {0,     1,     OP,    LOAD,        takeIMM,   toGPR   }: begin : valid_LD
+    {1'b0,  1'b1,  OP,    LOAD,        takeIMM,   toGPR   }: begin : valid_LD
       next_state = STALL_EX;
       ALUsrc1 = takeIMM;
       ALUop = LD;
       wr_en = 1;
     end
-    {0,     1,     OP,    LOAD,        takeGPR,   ?       }: begin : invalid_LD1
+    {1'b0,  1'b1,  OP,    LOAD,        takeGPR,   1'b?    }: begin : invalid_LD1
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {0,     1,     OP,    LOAD,        ?,         toIMM   }: begin : invalid_LD2
+    {1'b0,  1'b1,  OP,    LOAD,        32'b?,     toIMM   }: begin : invalid_LD2
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {0,     1,     OP,    OUTP,        takeGPR,   ?       }: begin : valid_OUT
+    {1'b0,  1'b1,  OP,    OUTP,        takeGPR,   1'b?    }: begin : valid_OUT
       next_state = STALL_EX;
       ALUsrc1 = takeGPR;
       ALUop = OUT;
       dataoutv = 1;
     end
-    {0,     1,     OP,    OUTP,        takeIMM,   ?       }: begin : invalid_OUT
+    {1'b0,  1'b1,  OP,    OUTP,        takeIMM,   1'b?    }: begin : invalid_OUT
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {0,     1,     OP,    ALU,         ?,         toIMM   }: begin : invalid_ALU
+    {1'b0,  1'b1,  OP,    ALU,         1'b?,      toIMM   }: begin : invalid_ALU
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {0,     1,     OP,    ALU,         ?,         toGPR   }: begin : valid_ALU
+    {1'b0,  1'b1,  OP,    ALU,         1'b?,      toGPR   }: begin : valid_ALU
       next_state = STALL_EX;
       ALUop = opcode;
       wr_en = 1;
@@ -188,6 +100,6 @@ always_comb begin
   stalled = (next_state == STALL_EX || next_state == STALL_WB);
 
 end
-*/
+
 
 endmodule
