@@ -34,13 +34,13 @@ class driver_class extends uvm_driver#(input_transaction_class);
             `uvm_info(get_name(), "New sequence item is driven:", UVM_DEBUG)
             // input_transaction_inst.print();
             // Pin wiggles
-            dut_vifc_in.reset <= input_transaction_inst.reset;
-            dut_vifc_in.instv <= input_transaction_inst.instv;
+            dut_vifc_in.reset  <= input_transaction_inst.reset;
+            dut_vifc_in.instv  <= input_transaction_inst.instv;
             dut_vifc_in.opcode <= input_transaction_inst.opcode;
-            dut_vifc_in.imm <= input_transaction_inst.imm;
-            dut_vifc_in.src1 <= input_transaction_inst.src1;
-            dut_vifc_in.src2 <= input_transaction_inst.src2;
-            dut_vifc_in.dst <= input_transaction_inst.dst;
+            dut_vifc_in.imm    <= input_transaction_inst.imm;
+            dut_vifc_in.src1   <= input_transaction_inst.src1;
+            dut_vifc_in.src2   <= input_transaction_inst.src2;
+            dut_vifc_in.dst    <= input_transaction_inst.dst;
 
             wait_for_no_stall();
 

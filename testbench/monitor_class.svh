@@ -76,9 +76,9 @@ class output_monitor_class extends uvm_monitor;
     
     forever begin
       @(negedge dut_vifc_out.clock);
-      transaction_inst.stalled = dut_vifc_out.stalled;
+      transaction_inst.stalled  = dut_vifc_out.stalled;
       transaction_inst.dataoutv = dut_vifc_out.dataoutvx3;
-      transaction_inst.dataout = dut_vifc_out.dataoutx3;
+      transaction_inst.dataout  = dut_vifc_out.dataoutx3;
       if (!put_port_inst.try_put(transaction_inst))
         `uvm_fatal(get_name(), "Monitor failed sending transaction to Comparator")
     end
