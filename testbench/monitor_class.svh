@@ -36,8 +36,7 @@ class input_monitor_class extends uvm_monitor;
       input_transaction_inst.src1   = dut_vifc_in.src1;
       input_transaction_inst.src2   = dut_vifc_in.src2;
       input_transaction_inst.dst    = dut_vifc_in.dst;
-      `uvm_info(get_name(), "Sending to reference model", UVM_NONE)
-      input_transaction_inst.print(); // FIXME - nkizner - 2025-08-25 - Delete after debug
+      // `uvm_info(get_name(), "Sending to reference model", UVM_NONE) input_transaction_inst.print();
       analysis_port_inst.write(input_transaction_inst);
       @(negedge dut_vifc_in.clock);
       reset_transaction_inst.reset = dut_vifc_in.reset;
