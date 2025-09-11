@@ -108,7 +108,7 @@ function void subscriber_class::print_coverage_report();
         covergroup_container_inst.covgrp.opcodes_right_after_reset.get_coverage(),
         covergroup_container_inst.covgrp.regs_used_as_src_before_initiated.get_coverage(),
         covergroup_container_inst.covgrp.regs_used_for_output.get_coverage(),
-        covergroup_container_inst.covgrp.imm_used_as_dst.get_coverage(),
+        covergroup_container_inst.covgrp.imm_used_as_dst.get_coverage()
         ),
         UVM_NONE);
     `uvm_info(get_name(), coverage_sampeling_report, UVM_NONE)

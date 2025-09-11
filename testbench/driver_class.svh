@@ -31,8 +31,7 @@ class driver_class extends uvm_driver#(input_transaction_class);
         
             @ (posedge dut_vifc_in.clock);
             seq_item_port.get_next_item(input_transaction_inst);
-            `uvm_info(get_name(), "New sequence item is driven:", UVM_DEBUG)
-            // input_transaction_inst.print();
+            // `uvm_info(get_name(), "New sequence item is driven:", UVM_NONE) input_transaction_inst.print();
             // Pin wiggles
             dut_vifc_in.reset  <= input_transaction_inst.reset;
             dut_vifc_in.instv  <= input_transaction_inst.instv;
