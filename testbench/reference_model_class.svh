@@ -32,7 +32,7 @@ class reference_model_class extends uvm_component;
       forever begin
         @start_processing;
         if (tx_transfer.reset == 1'b1) begin
-          `uvm_info(get_name(), "Reset has been detected. Disabling fork.", UVM_NONE) // FIXME - nkizner - 2022-12-31 - Delete after debug
+          `uvm_info(get_name(), "Reset has been detected. Disabling fork.", UVM_DEBUG) // FIXME - nkizner - 2022-12-31 - Delete after debug
           disable fork;
           output_transaction_inst.stalled = 1'b0;
         end
@@ -45,14 +45,13 @@ class reference_model_class extends uvm_component;
 
             case ({output_transaction_inst.stalled, tx.instv, tx.is_legal()}) inside
               3'b?0?:
-                `uvm_info(get_name(), "Sequence item is not valid. Skipping.", UVM_NONE)
+                `uvm_info(get_name(), "Sequence item is not valid. Skipping.", UVM_DEBUG)
               3'b??0:
-                `uvm_info(get_name(), "Sequence item is not legal. Skipping.", UVM_NONE)
+                `uvm_info(get_name(), "Sequence item is not legal. Skipping.", UVM_DEBUG)
               3'b1??:
-                `uvm_info(get_name(), "Sequence item is stalled. Skipping.", UVM_NONE)
+                `uvm_info(get_name(), "Sequence item is stalled. Skipping.", UVM_DEBUG)
               3'b011:begin
-                `uvm_info(get_name(), "Sequence item accepted. Starting processing:", UVM_NONE)
-                tx.print(); // FIXME - nkizner - 2022-12-31 - Delete after debug
+                // `uvm_info(get_name(), "Sequence item accepted. Starting processing:", UVM_NONE) tx.print(); // FIXME - nkizner - 2022-12-31 - Delete after debug
                 process_instruction(tx);
                 end
               default:
@@ -69,18 +68,54 @@ class reference_model_class extends uvm_component;
   task process_instruction(input input_transaction_class tx);
 
     t_data calc_res;
-    calc_res = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
-    pipeline_wait(.is_stall(tx.opcode != OUT));
-    // Write to register file
-    if (tx.opcode != OUT) begin
-      `uvm_info(get_name(), $sformatf("%0d = %0d %0s %0d", calc_res, get_reg(tx.src1, tx.imm), tx.opcode.name(), get_reg(tx.src2, tx.imm)), UVM_DEBUG) // FIXME - nkizner - 2022-12-31 - Delete after debug
-      write_regfile(calc_res, tx.dst);
-      // print_regfile(); // FIXME - nkizner - 2022-12-31 - Delete after debug
-    end // if OUT // FIXME - nkizner - 2023-02-04 - Use else?
-    output_transaction_inst.dataout = calc_res;
-    output_transaction_inst.dataoutv = tx.opcode==OUT;
+    integer id = $random%100;
+
+    id_and_wait(id);
+    exe_and_wait(.is_stall(tx.opcode != OUT), .calc_res(calc_res), .tx(tx), .id(id));
+    wait_and_wb (.is_stall(tx.opcode != OUT), .calc_res(calc_res), .tx(tx), .id(id));
+    update_output(.dataout(calc_res), .dataoutv(tx.opcode == OUT));
 
   endtask: process_instruction
+
+
+  task id_and_wait(input integer id);
+    
+    ;
+    #`CYCLE_TIME;
+
+  endtask: id_and_wait
+
+
+  task exe_and_wait(input bit is_stall, input input_transaction_class tx, input integer id, output t_data calc_res);
+    
+    output_transaction_inst.stalled = is_stall;
+    calc_res = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
+
+    #`CYCLE_TIME;
+
+  endtask: exe_and_wait
+
+
+  task wait_and_wb(input bit is_stall, input t_data calc_res, input input_transaction_class tx, input integer id);
+    
+    output_transaction_inst.stalled = is_stall;
+    #`CYCLE_TIME;
+    output_transaction_inst.stalled = 1'b0;
+
+    if (tx.opcode != OUT) begin
+      write_regfile(calc_res, tx.dst);
+      // `uvm_info(get_name(), $sformatf("regfile written. Status:"), UVM_NONE); print_regfile(); // FIXME - nkizner - 2022-12-31 - Delete after debug
+    end
+
+  endtask: wait_and_wb
+
+
+  function void update_output(input t_data dataout, input bit dataoutv);
+
+    output_transaction_inst.dataout = dataout;
+    output_transaction_inst.dataoutv = dataoutv;
+
+  endfunction: update_output
 
   
   virtual function void write(input_transaction_class t);
@@ -109,6 +144,7 @@ class reference_model_class extends uvm_component;
       R2: return regfile[2];
       R3: return regfile[3];
       IMM: return imm;
+      default: `uvm_error(get_name(), $sformatf("Invalid register name %0d", source))
     endcase
 
   endfunction: get_reg
@@ -126,33 +162,19 @@ class reference_model_class extends uvm_component;
 
   endfunction: lsb_idx
 
-
-  task pipeline_wait(input bit is_stall);
-
-    integer id = $random%100;
-    `uvm_info("Write delay", $sformatf("Start %0d", id), UVM_DEBUG)
-
-    output_transaction_inst.stalled = is_stall;
-    #(`STALL_DELAY + `HALF_CYCLE_TIME);
-    output_transaction_inst.stalled = 1'b0;
-    #`CYCLE_TIME;
-
-    `uvm_info("Write delay", $sformatf("Finish %0d", id), UVM_DEBUG)
-
-  endtask: pipeline_wait
-
   
   function t_data alu_calculate (t_opcode opcode, t_reg_name src1, t_reg_name src2, t_data imm);
 
     case(opcode)
       LD: return imm;
-      OUT: return get_reg(src1, imm);// FIXME - nkizner - 2022-12-02 - check src1!=IMM      
+      OUT: return get_reg(src1, imm);  // FIXME - nkizner - 2022-12-02 - check src1!=IMM
       ADD: return get_reg(src1, imm) + get_reg(src2, imm);
       SUB: return get_reg(src1, imm) - get_reg(src2, imm);
       NAND: return ~(get_reg(src1, imm) & get_reg(src2, imm));
       NOR: return ~(get_reg(src1, imm) | get_reg(src2, imm));
       XOR: return get_reg(src1, imm) ^ get_reg(src2, imm);
       SHFL: return get_reg(src1, imm) << lsb_idx(get_reg(src2, imm));
+      default: `uvm_error(get_name(), $sformatf("Invalid opcode %0h", opcode))
     endcase
 
   endfunction: alu_calculate
@@ -172,7 +194,7 @@ class reference_model_class extends uvm_component;
 
   function void print_regfile();
 
-    $display("%0d %0d %0d %0d", regfile[0], regfile[1], regfile[2], regfile[3]);
+    $display("%0h %0h %0h %0h", regfile[0], regfile[1], regfile[2], regfile[3]);
 
   endfunction: print_regfile
 
