@@ -11,6 +11,7 @@
 `define CYCLE_TIME (`HALF_CYCLE_TIME*2)         // clock cycle time (in ns)
 `define PIPE_DELAY (`PIPE_LEN*`CYCLE_TIME)      // length of pipeline (in ns)
 `define STALL_DELAY (`PIPE_DELAY-`CYCLE_TIME)   // length of stall (in ns)
+`define SAMPLE_DELAY (`CYCLE_TIME)              // time after driving inputs to sample outputs (in ns)
 
 package definitions;
 typedef enum logic [$clog2(`ALU_OP_AMT)-1:0] {LD='b000,

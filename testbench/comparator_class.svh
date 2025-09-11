@@ -6,32 +6,62 @@ class comparator_class extends uvm_component;
     super.new(name, parent);
   endfunction: new
   
-  // Instantiations
+
   uvm_nonblocking_put_imp#(output_transaction_class, comparator_class) put_imp_inst;
   uvm_nonblocking_get_port#(output_transaction_class) get_port_inst;
-  output_transaction_class refmod_output_transaction_inst;
+  output_transaction_class monitor_output_transaction_inst, refmod_output_transaction_inst;
+  event output_tx_arrived;
   
-  // Build phase
+
   virtual function void build_phase(uvm_phase phase);
+
     super.build_phase(phase);
     put_imp_inst = new("put_imp_inst", this);
     get_port_inst = new("get_port_inst", this);
-    refmod_output_transaction_inst = output_transaction_class::type_id::create("refmod_output_transaction_inst");
+    monitor_output_transaction_inst = output_transaction_class::type_id::create("monitor_output_transaction_inst");
+    refmod_output_transaction_inst = output_transaction_class::type_id::create("monitor_output_transaction_inst");
+
   endfunction: build_phase
 
-  virtual function bit try_put(output_transaction_class monitor_output_transaction_inst);
-    if (!get_port_inst.try_get(refmod_output_transaction_inst))
-      `uvm_fatal(get_name(), "Reference model failed sending transaction to Comparator")
-    if(monitor_output_transaction_inst.dataoutv == 1'b1 || refmod_output_transaction_inst.dataoutv == 1'b1)
-      if(!monitor_output_transaction_inst.compare(refmod_output_transaction_inst)) begin
-        `uvm_error(get_name(), "Outputs of DUT and reference model are not identical:")
-        monitor_output_transaction_inst.print();
-        refmod_output_transaction_inst.print();
+
+  task run_phase(uvm_phase phase);
+
+    forever begin
+      @ output_tx_arrived;
+      fork begin
+        output_transaction_class mon_out_tx = output_transaction_class::type_id::create("mon_out_tx");
+        output_transaction_class refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
+        mon_out_tx.copy(monitor_output_transaction_inst);
+        sync_DUT_to_refmod();
+        if (!get_port_inst.try_get(refmod_output_transaction_inst))
+          `uvm_fatal(get_name(), "Reference model failed sending transaction to Comparator")
+        refmod_out_tx.copy(refmod_output_transaction_inst);
+        if(mon_out_tx.dataoutv == 1'b1 || refmod_out_tx.dataoutv == 1'b1)
+          if(!mon_out_tx.compare(refmod_out_tx)) begin
+            `uvm_error(get_name(), "Outputs of DUT and reference model are not identical:")
+            mon_out_tx.print();
+            refmod_out_tx.print();
+        end
       end
+      join_none
+    end
+
+  endtask: run_phase
+
+
+  virtual function bit try_put(output_transaction_class monitor_output_transaction_inst_);
+
+    monitor_output_transaction_inst.copy(monitor_output_transaction_inst_);
+    -> output_tx_arrived;
     return 1;
+
   endfunction: try_put
 
   virtual function bit can_put();
   endfunction: can_put
+
+  task sync_DUT_to_refmod();
+    #`SAMPLE_DELAY;
+  endtask: sync_DUT_to_refmod
   
 endclass: comparator_class
