@@ -49,51 +49,59 @@ always_comb begin
 
   case 
     (
-    {reset, instv, state, opcode_type, src1_type, dst_type}
+    {reset, instv, state,    opcode_type, src1_type, dst_type}
     ) inside
-    {1'b1,  1'b?,  32'b?, 32'b?,       1'b?,      1'b?    }: begin : external_reset
+    {1'b1,  1'b?,  32'b?,    32'b?,       1'b?,      1'b?    }: begin : external_reset
       internal_reset = 1;
       clk_en_reg_IDtoEX = 0;
     end
-    {1'b0,  1'b0,  32'b?, 32'b?,       1'b?,      1'b?    }: begin : invalid_instruction
+    {1'b0,  1'b0,  32'b?,    32'b?,       1'b?,      1'b?    }: begin : invalid_instruction
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {1'b0,  1'b1,  OP,    LOAD,        takeIMM,   toGPR   }: begin : valid_LD
+    {1'b0,  1'b1,  OP,       LOAD,        takeIMM,   toGPR   }: begin : valid_LD
       next_state = STALL_EX;
       ALUsrc1 = takeIMM;
       ALUop = LD;
       wr_en = 1;
+      stalled = 1;
     end
-    {1'b0,  1'b1,  OP,    LOAD,        takeGPR,   1'b?    }: begin : invalid_LD1
+    {1'b0,  1'b1,  OP,       LOAD,        takeGPR,   1'b?    }: begin : invalid_LD1
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {1'b0,  1'b1,  OP,    LOAD,        32'b?,     toIMM   }: begin : invalid_LD2
+    {1'b0,  1'b1,  OP,       LOAD,        32'b?,     toIMM   }: begin : invalid_LD2
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {1'b0,  1'b1,  OP,    OUTP,        takeGPR,   1'b?    }: begin : valid_OUT
-      next_state = STALL_EX;
+    {1'b0,  1'b1,  OP,       OUTP,        takeGPR,   1'b?    }: begin : valid_OUT
+      next_state = OP;
       ALUsrc1 = takeGPR;
       ALUop = OUT;
       dataoutv = 1;
     end
-    {1'b0,  1'b1,  OP,    OUTP,        takeIMM,   1'b?    }: begin : invalid_OUT
+    {1'b0,  1'b1,  OP,       OUTP,        takeIMM,   1'b?    }: begin : invalid_OUT
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {1'b0,  1'b1,  OP,    ALU,         1'b?,      toIMM   }: begin : invalid_ALU
+    {1'b0,  1'b1,  OP,       ALU,         1'b?,      toIMM   }: begin : invalid_ALU
       next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
-    {1'b0,  1'b1,  OP,    ALU,         1'b?,      toGPR   }: begin : valid_ALU
+    {1'b0,  1'b1,  OP,       ALU,         1'b?,      toGPR   }: begin : valid_ALU
       next_state = STALL_EX;
       ALUop = opcode;
       wr_en = 1;
-      dataoutv = 0;
       ALUsrc1 = src1_type;
       ALUsrc2 = src2_type;
+      stalled = 1;
+    end
+    {1'b0,  1'b?,  STALL_EX, 32'b?,       1'b?,      1'b?   }: begin : STALL_EX_state
+      next_state = STALL_WB;
+      stalled = 1;
+    end
+    {1'b0,  1'b?,  STALL_WB, 32'b?,       1'b?,      1'b?   }: begin : STALL_WB_state
+      next_state = OP;
     end
   endcase
 
