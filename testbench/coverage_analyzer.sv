@@ -4,8 +4,8 @@ class coverage_analyzer extends uvm_component;
 
     input_transaction_class input_txn;
     coverage_transaction_class coverage;
-    uvm_blocking_put_port#(coverage_transaction_class) put_port_inst;
-    uvm_analysis_imp#(input_transaction_class, coverage_analyzer) analysis_imp_inst;
+    uvm_blocking_put_port#(coverage_transaction_class) cov_tlm;
+    uvm_analysis_imp#(input_transaction_class, coverage_analyzer) DUT_inputs_tlm;
     event send_to_covergroup;
 
 
@@ -21,8 +21,8 @@ class coverage_analyzer extends uvm_component;
         super.build_phase(phase);
         input_txn = new();
         coverage = coverage_transaction_class::type_id::create("coverage");
-        put_port_inst = new("put_port_inst", this);
-        analysis_imp_inst = new("analysis_imp_inst", this);
+        cov_tlm = new("cov_tlm", this);
+        DUT_inputs_tlm = new("DUT_inputs_tlm", this);
 
     endfunction : build_phase
 
@@ -41,7 +41,7 @@ class coverage_analyzer extends uvm_component;
         super.run_phase(phase);
         forever begin
             @ send_to_covergroup;
-            put_port_inst.put(coverage);
+            cov_tlm.put(coverage);
         end
 
     endtask : run_phase

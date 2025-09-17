@@ -6,7 +6,7 @@ class subscriber_class extends uvm_subscriber#(input_transaction_class);
     input_transaction_class latest_txn;
     covergroup_container covergroup_container_inst;
     coverage_analyzer coverage_analyzer_inst;
-    uvm_analysis_export#(input_transaction_class) analysis_export_inst;
+    uvm_analysis_export#(input_transaction_class) DUT_inputs_tlm;
 	string coverage_sampeling_report = "\nList of coverage samples:\n";
 
 	extern function new (string name = "subscriber_class", uvm_component parent = null);
@@ -34,16 +34,16 @@ endfunction: new
 function void subscriber_class::build_phase(uvm_phase phase);
 
     super.build_phase(phase);
-    analysis_export_inst = new("analysis_export_inst", this);
+    DUT_inputs_tlm = new("DUT_inputs_tlm", this);
 
 endfunction: build_phase
 
 
 function void subscriber_class::connect_phase (uvm_phase phase);
 
-    coverage_analyzer_inst.put_port_inst.connect(covergroup_container_inst.put_imp_inst);
-    analysis_export_inst.connect(this.analysis_export);
-    analysis_export_inst.connect(coverage_analyzer_inst.analysis_imp_inst);
+    coverage_analyzer_inst.cov_tlm.connect(covergroup_container_inst.cov_tlm);
+    DUT_inputs_tlm.connect(this.analysis_export);
+    DUT_inputs_tlm.connect(coverage_analyzer_inst.DUT_inputs_tlm);
     
 endfunction : connect_phase
 

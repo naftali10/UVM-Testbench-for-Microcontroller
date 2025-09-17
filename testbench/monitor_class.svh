@@ -10,16 +10,16 @@ class input_monitor_class extends uvm_monitor;
   virtual ifc_inputs dut_vifc_in;
   input_transaction_class input_transaction_inst;
   reset_transaction_class reset_transaction_inst;
-  uvm_analysis_port#(input_transaction_class) analysis_port_inst;
-  uvm_blocking_put_port#(reset_transaction_class) put_port_inst;
+  uvm_analysis_port#(input_transaction_class) DUT_inputs_tlm;
+  uvm_blocking_put_port#(reset_transaction_class) reset_tlm;
   
   // Build phase
   virtual function void build_phase (uvm_phase phase);
     super.build_phase(phase);
     input_transaction_inst = input_transaction_class::type_id::create("input_transaction_inst");
     reset_transaction_inst = reset_transaction_class::type_id::create("reset_transaction_inst");
-    analysis_port_inst = new("analysis_port_inst",this);
-    put_port_inst = new("put_port_inst", this);
+    DUT_inputs_tlm = new("DUT_inputs_tlm",this);
+    reset_tlm = new("reset_tlm", this);
     if(!uvm_config_db#(virtual ifc_inputs)::get(this, "", "dut_vifc_in", dut_vifc_in))
       `uvm_fatal(get_type_name(), "Input DUT interface not found")
   endfunction: build_phase
@@ -37,10 +37,10 @@ class input_monitor_class extends uvm_monitor;
       input_transaction_inst.src2   = dut_vifc_in.src2;
       input_transaction_inst.dst    = dut_vifc_in.dst;
       // `uvm_info(get_name(), "Sending to reference model", UVM_NONE) input_transaction_inst.print();
-      analysis_port_inst.write(input_transaction_inst);
+      DUT_inputs_tlm.write(input_transaction_inst);
       @(negedge dut_vifc_in.clock);
       reset_transaction_inst.reset = dut_vifc_in.reset;
-      put_port_inst.put(reset_transaction_inst);
+      reset_tlm.put(reset_transaction_inst);
     end
 
   endtask: run_phase
@@ -58,12 +58,12 @@ class output_monitor_class extends uvm_monitor;
 
   // Instantiation
   virtual ifc_outputs dut_vifc_out;
-  uvm_nonblocking_put_port#(output_transaction_class) put_port_inst;
+  uvm_nonblocking_put_port#(output_transaction_class) DUT_outputs_tlm;
 
   // Build phase
   virtual function void build_phase (uvm_phase phase);
     super.build_phase(phase);
-    put_port_inst = new("put_port_inst", this);
+    DUT_outputs_tlm = new("DUT_outputs_tlm", this);
     if(!uvm_config_db#(virtual ifc_outputs)::get(this, "", "dut_vifc_out", dut_vifc_out))
       `uvm_fatal(get_type_name(), "Output DUT interface not found")
   endfunction: build_phase
@@ -78,7 +78,7 @@ class output_monitor_class extends uvm_monitor;
       transaction_inst.stalled  = dut_vifc_out.stalled;
       transaction_inst.dataoutv = dut_vifc_out.dataoutvx3;
       transaction_inst.dataout  = dut_vifc_out.dataoutx3;
-      if (!put_port_inst.try_put(transaction_inst))
+      if (!DUT_outputs_tlm.try_put(transaction_inst))
         `uvm_fatal(get_name(), "Monitor failed sending transaction to Comparator")
     end
 

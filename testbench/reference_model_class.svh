@@ -7,9 +7,9 @@ class reference_model_class extends uvm_component;
   endfunction: new
   
   // Instantiation
-  uvm_analysis_imp#       (input_transaction_class,  reference_model_class) analysis_imp_inst;
-  uvm_blocking_put_imp#   (reset_transaction_class,  reference_model_class) put_imp_inst;
-  uvm_nonblocking_get_imp#(output_transaction_class, reference_model_class) get_imp_inst;
+  uvm_analysis_imp#       (input_transaction_class,  reference_model_class) DUT_inputs_tlm;
+  uvm_blocking_put_imp#   (reset_transaction_class,  reference_model_class) reset_tlm;
+  uvm_nonblocking_get_imp#(output_transaction_class, reference_model_class) refmod_outputs_tlm;
   output_transaction_class output_transaction_inst;
   event start_processing;
   input_transaction_class tx_transfer;
@@ -18,9 +18,9 @@ class reference_model_class extends uvm_component;
   // Build phase
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    analysis_imp_inst = new("analysis_imp_inst", this);
-    get_imp_inst =      new("get_imp_inst",      this);
-    put_imp_inst =      new("put_imp_inst",      this);
+    DUT_inputs_tlm     = new("DUT_inputs_tlm",     this);
+    refmod_outputs_tlm = new("refmod_outputs_tlm", this);
+    reset_tlm          = new("reset_tlm",          this);
     output_transaction_inst = output_transaction_class::type_id::create("output_transaction_inst");
     tx_transfer = input_transaction_class::type_id::create("tx_transfer");
   endfunction: build_phase

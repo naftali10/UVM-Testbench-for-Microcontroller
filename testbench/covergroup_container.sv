@@ -2,7 +2,7 @@ class covergroup_container extends uvm_component;
 
 	`uvm_component_utils(covergroup_container)
 
-    uvm_blocking_put_imp#(coverage_transaction_class, covergroup_container) put_imp_inst;
+    uvm_blocking_put_imp#(coverage_transaction_class, covergroup_container) cov_tlm;
 
     extern function new(string name = "covergroup_container", uvm_component parent = null);
     extern function void build_phase(uvm_phase phase);
@@ -150,7 +150,7 @@ endfunction : new
 function void covergroup_container::build_phase(uvm_phase phase);
 
     super.build_phase(phase);
-    put_imp_inst = new("put_imp_inst", this);
+    cov_tlm = new("cov_tlm", this);
 
 endfunction : build_phase
 
