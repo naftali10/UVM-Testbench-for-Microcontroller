@@ -9,8 +9,6 @@ class comparator_class extends uvm_component;
 
   uvm_nonblocking_put_imp# (output_transaction_class, comparator_class) DUT_outputs_tlm;
   uvm_nonblocking_get_port#(output_transaction_class)                   refmod_outputs_tlm;
-  output_transaction_class monitor_output_transaction_inst, refmod_output_transaction_inst;
-  event output_tx_arrived;
   
 
   virtual function void build_phase(uvm_phase phase);
@@ -18,50 +16,67 @@ class comparator_class extends uvm_component;
     super.build_phase(phase);
     DUT_outputs_tlm    = new("DUT_outputs_tlm", this);
     refmod_outputs_tlm = new("refmod_outputs_tlm", this);
-    monitor_output_transaction_inst = output_transaction_class::type_id::create("monitor_output_transaction_inst");
-    refmod_output_transaction_inst = output_transaction_class::type_id::create("monitor_output_transaction_inst");
 
   endfunction: build_phase
 
 
-  task run_phase(uvm_phase phase);
+  virtual function bit try_put(output_transaction_class monitor_output_transaction_inst);
 
-    forever begin
-      @ output_tx_arrived;
-      fork begin
-        output_transaction_class mon_out_tx = output_transaction_class::type_id::create("mon_out_tx");
-        output_transaction_class refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
-        mon_out_tx.copy(monitor_output_transaction_inst);
-        sync_DUT_to_refmod();
-        if (!refmod_outputs_tlm.try_get(refmod_output_transaction_inst))
-          `uvm_fatal(get_name(), "Reference model failed sending transaction to Comparator")
-        refmod_out_tx.copy(refmod_output_transaction_inst);
-        if(mon_out_tx.dataoutv == 1'b1 || refmod_out_tx.dataoutv == 1'b1)
-          if(!mon_out_tx.compare(refmod_out_tx)) begin
-            `uvm_error(get_name(), "Outputs of DUT and reference model are not identical:")
-            mon_out_tx.print();
-            refmod_out_tx.print();
-        end
-      end
-      join_none
-    end
+    output_transaction_class monitor_out_tx, refmod_out_tx;
+    monitor_out_tx = output_transaction_class::type_id::create("monitor_out_tx");
+    refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
 
-  endtask: run_phase
-
-
-  virtual function bit try_put(output_transaction_class monitor_output_transaction_inst_);
-
-    monitor_output_transaction_inst.copy(monitor_output_transaction_inst_);
-    -> output_tx_arrived;
-    return 1;
+    monitor_out_tx.copy(monitor_output_transaction_inst);
+    if (!refmod_outputs_tlm.try_get(refmod_out_tx))
+      `uvm_error(get_name(), "Comparator failed getting trasaction from Reference model")
+    compare_output_transactions(refmod_out_tx, monitor_out_tx);
 
   endfunction: try_put
+
 
   virtual function bit can_put();
   endfunction: can_put
 
-  task sync_DUT_to_refmod();
-    #`SAMPLE_DELAY;
-  endtask: sync_DUT_to_refmod
+
+  function void compare_output_transactions(output_transaction_class refmod_out_tx, output_transaction_class mon_out_tx);
+
+    compare_stalled(refmod_out_tx, mon_out_tx);
+    compare_dataoutv(refmod_out_tx, mon_out_tx);
+    compare_dataout(refmod_out_tx, mon_out_tx);
+
+  endfunction: compare_output_transactions
+
+
+  function void compare_stalled(output_transaction_class refmod_out_tx, output_transaction_class mon_out_tx);
+
+    if (refmod_out_tx.stalled != mon_out_tx.stalled) begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'stall' signal. DUT: %b, REF: %b", mon_out_tx.stalled, refmod_out_tx.stalled))
+    end else begin
+      `uvm_info(get_name(), $sformatf("'stalled' signal matches. DUT: %b, REF: %b", mon_out_tx.stalled, refmod_out_tx.stalled), UVM_DEBUG)
+    end
+
+  endfunction: compare_stalled
+
+
+  function void compare_dataoutv(output_transaction_class refmod_out_tx, output_transaction_class mon_out_tx);
+
+    if (refmod_out_tx.dataoutv != mon_out_tx.dataoutv) begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'dataoutv' signal. DUT: %b, REF: %b", mon_out_tx.dataoutv, refmod_out_tx.dataoutv))
+    end else begin
+      `uvm_info(get_name(), $sformatf("'dataoutv' signal matches. DUT: %b, REF: %b", mon_out_tx.dataoutv, refmod_out_tx.dataoutv), UVM_DEBUG)
+    end
+    
+  endfunction: compare_dataoutv
+
+
+  function void compare_dataout(output_transaction_class refmod_out_tx, output_transaction_class mon_out_tx);
+
+    if (refmod_out_tx.dataout&refmod_out_tx.dataoutv != mon_out_tx.dataout&mon_out_tx.dataoutv) begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'dataout' signal. DUT: %h, REF: %h", mon_out_tx.dataout, refmod_out_tx.dataout))
+    end else begin
+      `uvm_info(get_name(), $sformatf("'dataout' signal matches. DUT: %h, REF: %h", mon_out_tx.dataout, refmod_out_tx.dataout), UVM_DEBUG)
+    end
+
+  endfunction: compare_dataout
   
 endclass: comparator_class

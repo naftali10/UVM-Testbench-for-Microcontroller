@@ -28,7 +28,7 @@ class scoreboard_class extends uvm_scoreboard;
     super.connect_phase(phase);
     DUT_inputs_tlm.connect                    (reference_model_inst.DUT_inputs_tlm);
     reset_tlm.connect                         (reference_model_inst.reset_tlm);
-    comparator_inst.refmod_outputs_tlm.connect(reference_model_inst.refmod_outputs_tlm);
+    comparator_inst.refmod_outputs_tlm.connect(reference_model_inst.outputs_fifo_tlm.get_export);
     DUT_outputs_tlm.connect                   (comparator_inst.DUT_outputs_tlm);
   endfunction: connect_phase
   
