@@ -58,12 +58,12 @@ class output_monitor_class extends uvm_monitor;
 
   // Instantiation
   virtual ifc_outputs dut_vifc_out;
-  uvm_nonblocking_put_port#(output_transaction_class) DUT_outputs_tlm;
+  uvm_tlm_fifo#(output_transaction_class, output_monitor_class, 0) DUT_outputs_fifo_tlm;
 
   // Build phase
   virtual function void build_phase (uvm_phase phase);
     super.build_phase(phase);
-    DUT_outputs_tlm = new("DUT_outputs_tlm", this);
+    DUT_outputs_fifo_tlm = new("DUT_outputs_fifo_tlm", this);
     if(!uvm_config_db#(virtual ifc_outputs)::get(this, "", "dut_vifc_out", dut_vifc_out))
       `uvm_fatal(get_type_name(), "Output DUT interface not found")
   endfunction: build_phase
@@ -78,8 +78,8 @@ class output_monitor_class extends uvm_monitor;
       transaction_inst.stalled  = dut_vifc_out.stalled;
       transaction_inst.dataoutv = dut_vifc_out.dataoutvx3;
       transaction_inst.dataout  = dut_vifc_out.dataoutx3;
-      if (!DUT_outputs_tlm.try_put(transaction_inst))
-        `uvm_fatal(get_name(), "Monitor failed sending transaction to Comparator")
+      if (!DUT_outputs_fifo_tlm.try_put(transaction_inst))
+        `uvm_fatal(get_name(), "Monitor failed sending transaction to TLM FIFO")
     end
 
   endtask: run_phase

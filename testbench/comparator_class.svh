@@ -7,31 +7,32 @@ class comparator_class extends uvm_component;
   endfunction: new
   
 
-  uvm_nonblocking_put_imp# (output_transaction_class, comparator_class) DUT_outputs_tlm;
-  uvm_nonblocking_get_port#(output_transaction_class)                   refmod_outputs_tlm;
+  uvm_blocking_get_port#(output_transaction_class) DUT_outputs_tlm;
+  uvm_blocking_get_port#(output_transaction_class) refmod_outputs_tlm;
   
 
   virtual function void build_phase(uvm_phase phase);
 
     super.build_phase(phase);
-    DUT_outputs_tlm    = new("DUT_outputs_tlm", this);
+    DUT_outputs_tlm    = new("DUT_outputs_tlm",    this);
     refmod_outputs_tlm = new("refmod_outputs_tlm", this);
 
   endfunction: build_phase
 
 
-  virtual function bit try_put(output_transaction_class monitor_output_transaction_inst);
+  task run_phase(uvm_phase phase);
 
-    output_transaction_class monitor_out_tx, refmod_out_tx;
-    monitor_out_tx = output_transaction_class::type_id::create("monitor_out_tx");
+    output_transaction_class DUT_out_tx, refmod_out_tx;
+    DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
     refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
 
-    monitor_out_tx.copy(monitor_output_transaction_inst);
-    if (!refmod_outputs_tlm.try_get(refmod_out_tx))
-      `uvm_error(get_name(), "Comparator failed getting trasaction from Reference model")
-    compare_output_transactions(refmod_out_tx, monitor_out_tx);
+    forever begin
+      DUT_outputs_tlm.   get(DUT_out_tx);
+      refmod_outputs_tlm.get(refmod_out_tx)
+      compare_output_transactions(DUT_out_tx, refmod_out_tx);
+    end
 
-  endfunction: try_put
+  endtask: run_phase
 
 
   virtual function bit can_put();

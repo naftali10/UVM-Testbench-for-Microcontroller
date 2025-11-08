@@ -48,6 +48,7 @@ class reference_model_class extends uvm_component;
     if (tx_transfer.reset == 1'b1) begin
       tx_transfer.reset = 1'b1;
     end
+    stall_counter = stall_counter-1;
 
   endtask: put
 
@@ -60,7 +61,7 @@ class reference_model_class extends uvm_component;
       3'b1??: begin `uvm_info(get_name(), "Sequence item is stalled. Skipping.",   UVM_DEBUG) return 0; end
       3'b011: begin /*`uvm_info(get_name(), "Sequence item accepted for prediction:", UVM_NONE) tx.print();*/ return 1; end
       default: begin
-        `uvm_error(get_name(), $sformatf("Unexpected case in fork. %b", {0<stall_counter, tx.instv, tx.is_legal()}))
+        `uvm_error(get_name(), $sformatf("Unexpected case. %b", {0<stall_counter, tx.instv, tx.is_legal()}))
         return 0;
       end
     endcase
@@ -90,12 +91,15 @@ class reference_model_class extends uvm_component;
 
     if (tx.will_reset()) begin
       predict_reset();
+      stall_counter = 0;
     end
     else if (tx.will_output()) begin
       predict_out(tx);
+      stall_counter = 0;
     end
     else if (tx.will_writeback()) begin
       predict_writeback(tx);
+      stall_counter = 3;
     end
     else begin
       `uvm_error(get_name(), "Instruction is neither reset, output, nor writeback. This should never happen.")
@@ -207,4 +211,3 @@ class reference_model_class extends uvm_component;
   endfunction: print_regfile
 
 endclass: reference_model_class
-
