@@ -28,7 +28,7 @@ class comparator_class extends uvm_component;
 
     forever begin
       DUT_outputs_tlm.   get(DUT_out_tx);
-      refmod_outputs_tlm.get(refmod_out_tx)
+      refmod_outputs_tlm.get(refmod_out_tx);
       compare_output_transactions(DUT_out_tx, refmod_out_tx);
     end
 

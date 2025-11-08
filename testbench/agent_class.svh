@@ -13,7 +13,7 @@ class agent_class extends uvm_agent;
   sequencer_class sequencer_inst;
   uvm_analysis_port#(input_transaction_class) DUT_inputs_tlm;
   uvm_blocking_put_port#(reset_transaction_class) reset_tlm;
-  uvm_blocking_get_port#(output_transaction_class) DUT_outputs_tlm;
+  uvm_blocking_get_export#(output_transaction_class) DUT_outputs_tlm;
 
   // Build phase
   virtual function void build_phase(uvm_phase phase);
@@ -38,7 +38,7 @@ class agent_class extends uvm_agent;
         input_monitor_inst.DUT_inputs_tlm.connect(DUT_inputs_tlm);
         input_monitor_inst.reset_tlm.connect(reset_tlm);
     end else begin
-        output_monitor_inst.DUT_outputs_fifo_tlm.get_export.connect(DUT_outputs_tlm);
+        DUT_outputs_tlm.connect(output_monitor_inst.DUT_outputs_fifo_tlm.get_export);
     end
   endfunction
 

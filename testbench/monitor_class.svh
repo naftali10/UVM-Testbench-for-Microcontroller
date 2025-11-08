@@ -58,7 +58,7 @@ class output_monitor_class extends uvm_monitor;
 
   // Instantiation
   virtual ifc_outputs dut_vifc_out;
-  uvm_tlm_fifo#(output_transaction_class, output_monitor_class, 0) DUT_outputs_fifo_tlm;
+  uvm_tlm_fifo#(output_transaction_class) DUT_outputs_fifo_tlm;
 
   // Build phase
   virtual function void build_phase (uvm_phase phase);
@@ -78,8 +78,7 @@ class output_monitor_class extends uvm_monitor;
       transaction_inst.stalled  = dut_vifc_out.stalled;
       transaction_inst.dataoutv = dut_vifc_out.dataoutvx3;
       transaction_inst.dataout  = dut_vifc_out.dataoutx3;
-      if (!DUT_outputs_fifo_tlm.try_put(transaction_inst))
-        `uvm_fatal(get_name(), "Monitor failed sending transaction to TLM FIFO")
+      DUT_outputs_fifo_tlm.try_put(transaction_inst);
     end
 
   endtask: run_phase

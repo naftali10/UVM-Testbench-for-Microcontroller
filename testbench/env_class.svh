@@ -25,10 +25,10 @@ class env_class extends uvm_env;
   // Connect phase
   virtual function void connect_phase (uvm_phase phase);
     super.connect_phase(phase);
-    active_agent_inst.DUT_inputs_tlm.connect  (subscriber_inst.DUT_inputs_tlm);
-    active_agent_inst.DUT_inputs_tlm.connect  (scoreboard_inst.DUT_inputs_tlm);
-    active_agent_inst.reset_tlm.connect       (scoreboard_inst.reset_tlm);
-    passive_agent_inst.DUT_outputs_tlm.connect(scoreboard_inst.DUT_outputs_tlm);
+    active_agent_inst.DUT_inputs_tlm.connect(subscriber_inst.DUT_inputs_tlm);
+    active_agent_inst.DUT_inputs_tlm.connect(scoreboard_inst.DUT_inputs_tlm);
+    active_agent_inst.reset_tlm.     connect(scoreboard_inst.reset_tlm);
+    scoreboard_inst.DUT_outputs_tlm. connect(passive_agent_inst.DUT_outputs_tlm);
   endfunction: connect_phase
   
 endclass : env_class

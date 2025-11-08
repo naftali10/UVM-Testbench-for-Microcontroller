@@ -10,7 +10,7 @@ class scoreboard_class extends uvm_scoreboard;
   reference_model_class reference_model_inst;
   comparator_class comparator_inst;
   uvm_analysis_export#    (input_transaction_class)  DUT_inputs_tlm;
-  uvm_blocking_get_export#(output_transaction_class) DUT_outputs_tlm;
+  uvm_blocking_get_port#  (output_transaction_class) DUT_outputs_tlm;
   uvm_blocking_put_export#(reset_transaction_class)  reset_tlm;
   
   // Build phase
@@ -29,7 +29,7 @@ class scoreboard_class extends uvm_scoreboard;
     DUT_inputs_tlm.                    connect(reference_model_inst.DUT_inputs_tlm);
     reset_tlm.                         connect(reference_model_inst.reset_tlm);
     comparator_inst.refmod_outputs_tlm.connect(reference_model_inst.outputs_fifo_tlm.get_export);
-    DUT_outputs_tlm.                   connect(comparator_inst.DUT_outputs_tlm);
+    comparator_inst.DUT_outputs_tlm.   connect(DUT_outputs_tlm);
   endfunction: connect_phase
   
   // Check phase

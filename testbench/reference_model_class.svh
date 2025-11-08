@@ -9,7 +9,7 @@ class reference_model_class extends uvm_component;
   // Instantiation
   uvm_analysis_imp#       (input_transaction_class,  reference_model_class)    DUT_inputs_tlm;
   uvm_blocking_put_imp#   (reset_transaction_class,  reference_model_class)    reset_tlm;
-  uvm_tlm_fifo#           (output_transaction_class, reference_model_class, 0) outputs_fifo_tlm;
+  uvm_tlm_fifo#           (output_transaction_class) outputs_fifo_tlm;
 
   int stall_counter = 0;
   bit last_in_fifo_tlm_is_valid_out = 0;
