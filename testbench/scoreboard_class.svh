@@ -9,9 +9,9 @@ class scoreboard_class extends uvm_scoreboard;
   // Declarations
   reference_model_class reference_model_inst;
   comparator_class comparator_inst;
-  uvm_analysis_export#    (input_transaction_class)  DUT_inputs_tlm;
-  uvm_blocking_get_port#  (output_transaction_class) DUT_outputs_tlm;
-  uvm_blocking_put_export#(reset_transaction_class)  reset_tlm;
+  uvm_analysis_export#     (input_transaction_class)  DUT_inputs_tlm;
+  uvm_nonblocking_get_port#(output_transaction_class) DUT_outputs_tlm;
+  uvm_blocking_put_export# (reset_transaction_class)  reset_tlm;
   
   // Build phase
   virtual function void build_phase(uvm_phase phase);

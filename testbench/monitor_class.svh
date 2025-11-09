@@ -63,7 +63,7 @@ class output_monitor_class extends uvm_monitor;
   // Build phase
   virtual function void build_phase (uvm_phase phase);
     super.build_phase(phase);
-    DUT_outputs_fifo_tlm = new("DUT_outputs_fifo_tlm", this);
+    DUT_outputs_fifo_tlm = new("DUT_outputs_fifo_tlm", this, 0);
     if(!uvm_config_db#(virtual ifc_outputs)::get(this, "", "dut_vifc_out", dut_vifc_out))
       `uvm_fatal(get_type_name(), "Output DUT interface not found")
   endfunction: build_phase
@@ -71,10 +71,11 @@ class output_monitor_class extends uvm_monitor;
   // Run phase
   task run_phase(uvm_phase phase);
 
-    output_transaction_class transaction_inst = output_transaction_class::type_id::create("transaction_inst");
+    output_transaction_class transaction_inst;
     
     forever begin
       @(negedge dut_vifc_out.clock);
+      transaction_inst = output_transaction_class::type_id::create("transaction_inst");
       transaction_inst.stalled  = dut_vifc_out.stalled;
       transaction_inst.dataoutv = dut_vifc_out.dataoutvx3;
       transaction_inst.dataout  = dut_vifc_out.dataoutx3;

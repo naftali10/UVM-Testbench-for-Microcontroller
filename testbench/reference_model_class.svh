@@ -24,7 +24,7 @@ class reference_model_class extends uvm_component;
     super.build_phase(phase);
     DUT_inputs_tlm   = new("DUT_inputs_tlm",   this);
     reset_tlm        = new("reset_tlm",        this);
-    outputs_fifo_tlm = new("outputs_fifo_tlm", this);
+    outputs_fifo_tlm = new("outputs_fifo_tlm", this, 0);
 
     make_output_templates();
 
@@ -128,6 +128,7 @@ class reference_model_class extends uvm_component;
     else begin
       outputs_fifo_tlm.try_put(not_stalled_not_valid);
       outputs_fifo_tlm.try_put(not_stalled_not_valid);
+      outputs_fifo_tlm.try_put(not_stalled_not_valid);
       outputs_fifo_tlm.try_put(valid_out);
     end
     last_in_fifo_tlm_is_valid_out = 1;
@@ -139,7 +140,7 @@ class reference_model_class extends uvm_component;
 
     t_data result = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
     write_regfile(result, tx.dst);
-    `uvm_info(get_name(), $sformatf("Writing back %0h to %0d", result, tx.dst), UVM_NONE)
+    `uvm_info(get_name(), $sformatf("Writing back %0h to R%0d", result, tx.dst), UVM_NONE)
     outputs_fifo_tlm.try_put(stalled_not_valid);
     outputs_fifo_tlm.try_put(stalled_not_valid);
     outputs_fifo_tlm.try_put(not_stalled_not_valid);
@@ -209,5 +210,19 @@ class reference_model_class extends uvm_component;
     $display("%0h %0h %0h %0h", regfile[0], regfile[1], regfile[2], regfile[3]);
 
   endfunction: print_regfile
+
+
+  virtual function print_fifo();
+
+    int fifo_size = outputs_fifo_tlm.used();
+    output_transaction_class item = output_transaction_class::type_id::create("item");
+    `uvm_info(get_name(), $sformatf("Printing FIFO contents. Size: %0d", fifo_size), UVM_NONE);
+    for (int i = 0; i < fifo_size; i++) begin
+      if (outputs_fifo_tlm.try_get(item)) begin
+        `uvm_info(get_name(), $sformatf("FIFO Item %0d: stalled=%0h, dataoutv=%0h, dataout=%0h", i, item.stalled, item.dataoutv, item.dataout), UVM_NONE);
+        outputs_fifo_tlm.try_put(item);
+      end
+    end
+  endfunction: print_fifo
 
 endclass: reference_model_class

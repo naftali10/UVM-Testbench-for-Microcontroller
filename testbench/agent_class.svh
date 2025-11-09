@@ -13,7 +13,7 @@ class agent_class extends uvm_agent;
   sequencer_class sequencer_inst;
   uvm_analysis_port#(input_transaction_class) DUT_inputs_tlm;
   uvm_blocking_put_port#(reset_transaction_class) reset_tlm;
-  uvm_blocking_get_export#(output_transaction_class) DUT_outputs_tlm;
+  uvm_nonblocking_get_export#(output_transaction_class) DUT_outputs_tlm;
 
   // Build phase
   virtual function void build_phase(uvm_phase phase);

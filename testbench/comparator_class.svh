@@ -7,8 +7,8 @@ class comparator_class extends uvm_component;
   endfunction: new
   
 
-  uvm_blocking_get_port#(output_transaction_class) DUT_outputs_tlm;
-  uvm_blocking_get_port#(output_transaction_class) refmod_outputs_tlm;
+  uvm_nonblocking_get_port#(output_transaction_class) DUT_outputs_tlm;
+  uvm_nonblocking_get_port#(output_transaction_class) refmod_outputs_tlm;
   
 
   virtual function void build_phase(uvm_phase phase);
@@ -20,23 +20,51 @@ class comparator_class extends uvm_component;
   endfunction: build_phase
 
 
-  task run_phase(uvm_phase phase);
+  virtual function void check_phase(uvm_phase phase);
 
     output_transaction_class DUT_out_tx, refmod_out_tx;
+
+    super.check_phase(phase);
+
+    // print_fifos();
+
     DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
     refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
 
-    forever begin
-      DUT_outputs_tlm.   get(DUT_out_tx);
-      refmod_outputs_tlm.get(refmod_out_tx);
+    while (DUT_outputs_tlm.can_get() && refmod_outputs_tlm.can_get()) begin
+      DUT_outputs_tlm.   try_get(DUT_out_tx);
+      refmod_outputs_tlm.try_get(refmod_out_tx);
       compare_output_transactions(DUT_out_tx, refmod_out_tx);
     end
 
-  endtask: run_phase
+    if(refmod_outputs_tlm.can_get())
+      `uvm_warning(get_name(), "Reference model has extra output transactions that were not compared with DUT output transactions")
+    if(DUT_outputs_tlm.can_get())
+      `uvm_warning(get_name(), "DUT has extra output transactions that were not compared with reference model output transactions")
+
+  endfunction: check_phase
 
 
-  virtual function bit can_put();
-  endfunction: can_put
+  function void print_fifos();
+
+    output_transaction_class DUT_out_tx, refmod_out_tx;
+    int idx = 0;
+
+    while (DUT_outputs_tlm.can_get()) begin
+      DUT_outputs_tlm.try_get(DUT_out_tx);
+      `uvm_info(get_name(), $sformatf("DUT FIFO %2d: stalled=%0h, dataoutv=%0h, dataout=%0h", idx, DUT_out_tx.stalled, DUT_out_tx.dataoutv, DUT_out_tx.dataout), UVM_NONE)
+      idx = idx + 1;
+    end
+
+    idx = 0;
+
+    while (refmod_outputs_tlm.can_get()) begin
+      refmod_outputs_tlm.try_get(refmod_out_tx);
+      `uvm_info(get_name(), $sformatf("REFMOD FIFO %2d: stalled=%0h, dataoutv=%0h, dataout=%0h", idx, refmod_out_tx.stalled, refmod_out_tx.dataoutv, refmod_out_tx.dataout), UVM_NONE)
+      idx = idx + 1;
+    end
+
+  endfunction: print_fifos
 
 
   function void compare_output_transactions(output_transaction_class refmod_out_tx, output_transaction_class mon_out_tx);
