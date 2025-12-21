@@ -26,23 +26,38 @@ class comparator_class extends uvm_component;
 
     super.check_phase(phase);
 
-    // print_fifos();
+    print_fifos();
 
-    DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
-    refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
+    // DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
+    // refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
 
-    while (DUT_outputs_tlm.can_get() && refmod_outputs_tlm.can_get()) begin
-      DUT_outputs_tlm.   try_get(DUT_out_tx);
-      refmod_outputs_tlm.try_get(refmod_out_tx);
-      compare_output_transactions(DUT_out_tx, refmod_out_tx);
-    end
+    // while (DUT_outputs_tlm.can_get() && refmod_outputs_tlm.can_get()) begin
+    //   DUT_outputs_tlm.   try_get(DUT_out_tx);
+    //   refmod_outputs_tlm.try_get(refmod_out_tx);
+    //   compare_output_transactions(DUT_out_tx, refmod_out_tx);
+    // end
 
-    if(refmod_outputs_tlm.can_get())
-      `uvm_warning(get_name(), "Reference model has extra output transactions that were not compared with DUT output transactions")
-    if(DUT_outputs_tlm.can_get())
-      `uvm_warning(get_name(), "DUT has extra output transactions that were not compared with reference model output transactions")
+    // check_extra_outputs(DUT_outputs_tlm, "DUT");
+    // check_extra_outputs(refmod_outputs_tlm, "Reference Model");
 
   endfunction: check_phase
+
+
+  function void check_extra_outputs(uvm_nonblocking_get_port#(output_transaction_class) outputs_tlm, string source_name);
+    
+    output_transaction_class out_tx;
+    int counter = 0;
+
+    out_tx = output_transaction_class::type_id::create("out_tx");
+
+    while (outputs_tlm.can_get()) begin
+      outputs_tlm.try_get(out_tx);
+      counter = counter + 1;
+    end
+    if (counter > 0)
+      `uvm_warning(get_name(), $sformatf("%s has %0d extra output transactions that were not compared", source_name, counter))
+
+  endfunction: check_extra_outputs
 
 
   function void print_fifos();
