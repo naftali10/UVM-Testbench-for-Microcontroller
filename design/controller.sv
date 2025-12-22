@@ -56,7 +56,6 @@ always_comb begin
       clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b0,  32'b?,    32'b?,       1'b?,      1'b?    }: begin : invalid_instruction
-      next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       LOAD,        takeIMM,   toGPR   }: begin : valid_LD
@@ -67,25 +66,20 @@ always_comb begin
       stalled = 1;
     end
     {1'b0,  1'b1,  OP,       LOAD,        takeGPR,   1'b?    }: begin : invalid_LD1
-      next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       LOAD,        32'b?,     toIMM   }: begin : invalid_LD2
-      next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       OUTP,        takeGPR,   1'b?    }: begin : valid_OUT
-      next_state = OP;
       ALUsrc1 = takeGPR;
       ALUop = OUT;
       dataoutv = 1;
     end
     {1'b0,  1'b1,  OP,       OUTP,        takeIMM,   1'b?    }: begin : invalid_OUT
-      next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       ALU,         1'b?,      toIMM   }: begin : invalid_ALU
-      next_state = OP;
       clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       ALU,         1'b?,      toGPR   }: begin : valid_ALU
@@ -101,7 +95,6 @@ always_comb begin
       stalled = 1;
     end
     {1'b0,  1'b?,  STALL_WB, 32'b?,       1'b?,      1'b?   }: begin : STALL_WB_state
-      next_state = OP;
     end
   endcase
 
