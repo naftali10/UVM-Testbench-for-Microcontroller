@@ -10,12 +10,18 @@ class sequence_class extends uvm_sequence#(input_transaction_class);
   
   task body();
     
+
     `uvm_do_with(input_transaction_inst, {reset==1'b1;})  // reset
 
-    `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD;  src1==IMM; dst==R0; })  // Load IMM to R0
-    
+
+    `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=R0;})  // Load IMM to GPR
+    `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=R1;})  // Load IMM to GPR
+    `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=R2;})  // Load IMM to GPR
+    `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==LD; src1==IMM; dst!=R3;})  // Load IMM to GPR
+
+
     repeat (4)
-      `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==OUT; src1==R0;  dst!=IMM;})  // Output R0
+      `uvm_do_with(input_transaction_inst, {reset==1'b0; instv==1'b1; opcode==OUT; src1!=IMM;  dst!=IMM;})  // Output GPR
 
 
     `uvm_do_with(input_transaction_inst, {reset==1'b1;})  // reset
