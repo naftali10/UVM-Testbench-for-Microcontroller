@@ -55,13 +55,13 @@ class reference_model_class extends uvm_component;
 
   function bit should_predict(input_transaction_class tx);
 
-    case ({0<stall_counter, tx.instv, tx.is_legal()}) inside
-      3'b?0?: begin`uvm_info(get_name(), "Sequence item is not valid. Skipping.", UVM_DEBUG)  return 0; end
-      3'b??0: begin `uvm_info(get_name(), "Sequence item is not legal. Skipping.", UVM_DEBUG) return 0; end
-      3'b1??: begin `uvm_info(get_name(), "Sequence item is stalled. Skipping.",   UVM_DEBUG) return 0; end
-      3'b011: begin /*`uvm_info(get_name(), "Sequence item accepted for prediction:", UVM_NONE) tx.print();*/ return 1; end
+    case ({0<stall_counter, tx.reset, tx.instv, tx.is_legal()}) inside
+      4'b?00?:          begin`uvm_info(get_name(), "Sequence item is not valid. Skipping.", UVM_DEBUG)  return 0; end
+      4'b?0?0, 4'b?x?0: begin `uvm_info(get_name(), "Sequence item is not legal. Skipping.", UVM_DEBUG) return 0; end
+      4'b10??:          begin `uvm_info(get_name(), "Sequence item is stalled. Skipping.",   UVM_DEBUG) return 0; end
+      4'b0011, 4'b?1??: begin /*`uvm_info(get_name(), "Sequence item accepted for prediction:",UVM_NONE) tx.print();*/ return 1; end
       default: begin
-        `uvm_error(get_name(), $sformatf("Unexpected case. %b", {0<stall_counter, tx.instv, tx.is_legal()}))
+        `uvm_error(get_name(), $sformatf("Unexpected case. %b", {0<stall_counter, tx.reset, tx.instv, tx.is_legal()}))
         return 0;
       end
     endcase
@@ -112,9 +112,13 @@ class reference_model_class extends uvm_component;
 
     output_transaction_class not_stalled_not_valid_copy = output_transaction_class::type_id::create("not_stalled_not_valid_copy");
     not_stalled_not_valid_copy.copy(not_stalled_not_valid);
+    
+    if (outputs_fifo_tlm.is_empty())
+      outputs_fifo_tlm.try_put(not_stalled_not_valid_copy);
 
-    outputs_fifo_tlm.flush();
-    outputs_fifo_tlm.try_put(not_stalled_not_valid_copy);
+    if (last_in_fifo_tlm_is_valid_out)
+      flush_last_two_existing_preditions();
+    
     last_in_fifo_tlm_is_valid_out = 0;
 
   endfunction: predict_reset
@@ -174,6 +178,30 @@ class reference_model_class extends uvm_component;
 
   endfunction: predict_writeback
 
+
+  function void flush_last_two_existing_preditions();
+
+    output_transaction_class item;
+    int fifo_size = outputs_fifo_tlm.used();
+    output_transaction_class temp_fifo[$];
+
+    // Store in temp_fifo all but last 2 items
+    for (int i = 0; i < fifo_size-2; i++) begin
+      outputs_fifo_tlm.try_get(item);
+      temp_fifo.push_back(item);
+    end
+
+    // Discard last 2 items
+    for (int i = 0; i < 2; i++) begin
+      outputs_fifo_tlm.try_get(item);
+    end
+
+    // Reinsert all items back to outputs_fifo_tlm
+    for (int i = 0; i < fifo_size-2; i++) begin
+      outputs_fifo_tlm.try_put(temp_fifo[i]);
+    end
+
+  endfunction: flush_last_two_existing_preditions
 
   function void add_writeack_stalls_to_existing_prediction();
 

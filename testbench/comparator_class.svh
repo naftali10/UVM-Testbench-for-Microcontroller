@@ -26,19 +26,19 @@ class comparator_class extends uvm_component;
 
     super.check_phase(phase);
 
-    print_fifos();
+    // print_fifos();
 
-    // DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
-    // refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
+    DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
+    refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
 
-    // while (DUT_outputs_tlm.can_get() && refmod_outputs_tlm.can_get()) begin
-    //   DUT_outputs_tlm.   try_get(DUT_out_tx);
-    //   refmod_outputs_tlm.try_get(refmod_out_tx);
-    //   compare_output_transactions(DUT_out_tx, refmod_out_tx);
-    // end
+    while (DUT_outputs_tlm.can_get() && refmod_outputs_tlm.can_get()) begin
+      DUT_outputs_tlm.   try_get(DUT_out_tx);
+      refmod_outputs_tlm.try_get(refmod_out_tx);
+      compare_output_transactions(DUT_out_tx, refmod_out_tx);
+    end
 
-    // check_extra_outputs(DUT_outputs_tlm, "DUT");
-    // check_extra_outputs(refmod_outputs_tlm, "Reference Model");
+    check_extra_outputs(DUT_outputs_tlm, "DUT");
+    check_extra_outputs(refmod_outputs_tlm, "Reference Model");
 
   endfunction: check_phase
 
