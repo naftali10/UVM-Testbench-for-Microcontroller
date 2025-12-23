@@ -24,25 +24,36 @@ class comparator_class extends uvm_component;
 
   virtual function void check_phase(uvm_phase phase);
 
-    output_transaction_class DUT_out_tx, refmod_out_tx;
-    int min_size;
-    string min_name;
-    bit all_ok = 1;
-
     super.check_phase(phase);
 
-    DUT_out_tx    = output_transaction_class::type_id::create("DUT_out_tx");
-    refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
+    pull_fifos();
+    compare_fifos();
+    check_extra_items("DUT", "Reference Model", temp_DUT_fifo.size(), temp_REF_fifo.size());
+
+  endfunction: check_phase
+
+
+  function void pull_fifos();
+
+    output_transaction_class output_tx = output_transaction_class::type_id::create("output_tx");
 
     while (DUT_outputs_tlm.can_get()) begin
-      DUT_outputs_tlm.try_get(DUT_out_tx);
-      temp_DUT_fifo.push_back(DUT_out_tx);
+      DUT_outputs_tlm.try_get(output_tx);
+      temp_DUT_fifo.push_back(output_tx);
     end
 
     while (refmod_outputs_tlm.can_get()) begin
-      refmod_outputs_tlm.try_get(refmod_out_tx);
-      temp_REF_fifo.push_back(refmod_out_tx);
+      refmod_outputs_tlm.try_get(output_tx);
+      temp_REF_fifo.push_back(output_tx);
     end
+
+  endfunction: pull_fifos
+
+
+  function void compare_fifos();
+
+    int min_size;
+    bit all_ok = 1;
 
     min_size = (temp_DUT_fifo.size() < temp_REF_fifo.size()) ? temp_DUT_fifo.size() : temp_REF_fifo.size();
     
@@ -57,12 +68,10 @@ class comparator_class extends uvm_component;
       `uvm_info(get_name(), "All output transactions match between DUT and Reference Model.", UVM_NONE)
     end
 
-    check_extra_outputs("DUT", "Reference Model", temp_DUT_fifo.size(), temp_REF_fifo.size());
-
-  endfunction: check_phase
+  endfunction: compare_fifos
 
 
-  function void check_extra_outputs(string fifo1_name, string fifo2_name, int fifo1_size, int fifo2_size);
+  function void check_extra_items(string fifo1_name, string fifo2_name, int fifo1_size, int fifo2_size);
 
     if (fifo1_size > fifo2_size)
       `uvm_warning(get_name(), $sformatf("%s has %0d extra output transactions that were not compared", fifo1_name, fifo1_size-fifo2_size))
@@ -70,7 +79,7 @@ class comparator_class extends uvm_component;
     if (fifo2_size > fifo1_size)
       `uvm_warning(get_name(), $sformatf("%s has %0d extra output transactions that were not compared", fifo2_name, fifo2_size-fifo1_size))
 
-  endfunction: check_extra_outputs
+  endfunction: check_extra_items
 
 
   function void print_fifos();
