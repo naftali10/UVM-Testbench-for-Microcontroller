@@ -2,16 +2,16 @@ class driver_class extends uvm_driver#(input_transaction_class);
 
     `uvm_component_utils(driver_class)
 
-    function new (string name = "driver_class", uvm_component parent = null);
-        super.new(name, parent);
-    endfunction
-
-    // Instantiations
     virtual ifc_inputs dut_vifc_in;
     virtual ifc_outputs dut_vifc_out;
     input_transaction_class input_transaction_inst;
 
-    // Build phase
+
+    function new (string name = "driver_class", uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+
+
     virtual function void build_phase(uvm_phase phase);
 
         super.build_phase(phase);
@@ -24,7 +24,7 @@ class driver_class extends uvm_driver#(input_transaction_class);
 
     endfunction
 
-    // Run phase
+
     virtual task run_phase(uvm_phase phase);
     
         forever begin
@@ -32,7 +32,6 @@ class driver_class extends uvm_driver#(input_transaction_class);
             @ (posedge dut_vifc_in.clock);
             seq_item_port.get_next_item(input_transaction_inst);
             // `uvm_info(get_name(), "New sequence item is driven:", UVM_NONE) input_transaction_inst.print();
-            // Pin wiggles
             dut_vifc_in.reset  <= input_transaction_inst.reset;
             dut_vifc_in.instv  <= input_transaction_inst.instv;
             dut_vifc_in.opcode <= input_transaction_inst.opcode;
@@ -49,9 +48,12 @@ class driver_class extends uvm_driver#(input_transaction_class);
     
     endtask
 
+
     virtual task wait_for_no_stall();
+
         #`HALF_CYCLE_TIME // Give time for DUT to respond to new input values
         wait(dut_vifc_out.stalled == 1'b0);
+        
     endtask
 
 endclass : driver_class

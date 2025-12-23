@@ -7,61 +7,144 @@ class comparator_class extends uvm_component;
   endfunction: new
   
 
-  uvm_nonblocking_put_imp#(output_transaction_class, comparator_class) put_imp_inst;
-  uvm_nonblocking_get_port#(output_transaction_class) get_port_inst;
-  output_transaction_class monitor_output_transaction_inst, refmod_output_transaction_inst;
-  event output_tx_arrived;
+  uvm_nonblocking_get_port#(output_transaction_class) DUT_outputs_tlm;
+  uvm_nonblocking_get_port#(output_transaction_class) refmod_outputs_tlm;
+  output_transaction_class temp_DUT_fifo[$], temp_REF_fifo[$];
+
   
 
   virtual function void build_phase(uvm_phase phase);
 
     super.build_phase(phase);
-    put_imp_inst = new("put_imp_inst", this);
-    get_port_inst = new("get_port_inst", this);
-    monitor_output_transaction_inst = output_transaction_class::type_id::create("monitor_output_transaction_inst");
-    refmod_output_transaction_inst = output_transaction_class::type_id::create("monitor_output_transaction_inst");
+    DUT_outputs_tlm    = new("DUT_outputs_tlm",    this);
+    refmod_outputs_tlm = new("refmod_outputs_tlm", this);
 
   endfunction: build_phase
 
 
-  task run_phase(uvm_phase phase);
+  virtual function void check_phase(uvm_phase phase);
 
-    forever begin
-      @ output_tx_arrived;
-      fork begin
-        output_transaction_class mon_out_tx = output_transaction_class::type_id::create("mon_out_tx");
-        output_transaction_class refmod_out_tx = output_transaction_class::type_id::create("refmod_out_tx");
-        mon_out_tx.copy(monitor_output_transaction_inst);
-        sync_DUT_to_refmod();
-        if (!get_port_inst.try_get(refmod_output_transaction_inst))
-          `uvm_fatal(get_name(), "Reference model failed sending transaction to Comparator")
-        refmod_out_tx.copy(refmod_output_transaction_inst);
-        if(mon_out_tx.dataoutv == 1'b1 || refmod_out_tx.dataoutv == 1'b1)
-          if(!mon_out_tx.compare(refmod_out_tx)) begin
-            `uvm_error(get_name(), "Outputs of DUT and reference model are not identical:")
-            mon_out_tx.print();
-            refmod_out_tx.print();
-        end
-      end
-      join_none
+    super.check_phase(phase);
+
+    pull_fifos();
+    compare_fifos();
+    check_extra_items("DUT", "Reference Model", temp_DUT_fifo.size(), temp_REF_fifo.size());
+
+  endfunction: check_phase
+
+
+  function void pull_fifos();
+
+    output_transaction_class output_tx = output_transaction_class::type_id::create("output_tx");
+
+    while (DUT_outputs_tlm.can_get()) begin
+      DUT_outputs_tlm.try_get(output_tx);
+      temp_DUT_fifo.push_back(output_tx);
     end
 
-  endtask: run_phase
+    while (refmod_outputs_tlm.can_get()) begin
+      refmod_outputs_tlm.try_get(output_tx);
+      temp_REF_fifo.push_back(output_tx);
+    end
+
+  endfunction: pull_fifos
 
 
-  virtual function bit try_put(output_transaction_class monitor_output_transaction_inst_);
+  function void compare_fifos();
 
-    monitor_output_transaction_inst.copy(monitor_output_transaction_inst_);
-    -> output_tx_arrived;
-    return 1;
+    int min_size;
+    bit all_ok = 1;
 
-  endfunction: try_put
+    min_size = (temp_DUT_fifo.size() < temp_REF_fifo.size()) ? temp_DUT_fifo.size() : temp_REF_fifo.size();
+    
+    for (int i = 0; i < min_size; i++) begin
+      all_ok &= are_output_transactions_same(temp_REF_fifo[i], temp_DUT_fifo[i], i);
+    end
 
-  virtual function bit can_put();
-  endfunction: can_put
+    if (!all_ok) begin
+      `uvm_error(get_name(), "Output comparison failed. See errors above for details.")
+      print_fifos();
+    end else begin
+      `uvm_info(get_name(), "All output transactions match between DUT and Reference Model.", UVM_NONE)
+    end
 
-  task sync_DUT_to_refmod();
-    #`SAMPLE_DELAY;
-  endtask: sync_DUT_to_refmod
+  endfunction: compare_fifos
+
+
+  function void check_extra_items(string fifo1_name, string fifo2_name, int fifo1_size, int fifo2_size);
+
+    if (fifo1_size > fifo2_size)
+      `uvm_warning(get_name(), $sformatf("%s has %0d extra output transactions that were not compared", fifo1_name, fifo1_size-fifo2_size))
+
+    if (fifo2_size > fifo1_size)
+      `uvm_warning(get_name(), $sformatf("%s has %0d extra output transactions that were not compared", fifo2_name, fifo2_size-fifo1_size))
+
+  endfunction: check_extra_items
+
+
+  function void print_fifos();
+
+    `uvm_info(get_name(), "Printing contents of DUT and REF model output FIFOs:", UVM_NONE)
+
+    for (int i = 0; i < temp_DUT_fifo.size(); i++) begin
+      `uvm_info(get_name(), $sformatf("DUT FIFO %2d: stalled=%0h, dataoutv=%0h, dataout=%0h", i, temp_DUT_fifo[i].stalled, temp_DUT_fifo[i].dataoutv, temp_DUT_fifo[i].dataout), UVM_NONE)
+    end
+    for (int j = 0; j < temp_REF_fifo.size(); j++) begin
+      `uvm_info(get_name(), $sformatf("REFMOD FIFO %2d: stalled=%0h, dataoutv=%0h, dataout=%0h", j, temp_REF_fifo[j].stalled, temp_REF_fifo[j].dataoutv, temp_REF_fifo[j].dataout), UVM_NONE)
+    end
+
+  endfunction: print_fifos
+
+
+  function bit are_output_transactions_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int index);
+
+    bit ok = 1;
+
+    ok &= is_stalled_same(refmod_out_tx, dut_out_tx, index);
+    ok &= is_dataoutv_same(refmod_out_tx, dut_out_tx, index);
+    ok &= is_dataout_same(refmod_out_tx, dut_out_tx, index);
+    
+    return ok;
+
+  endfunction: are_output_transactions_same
+
+
+  function bit is_stalled_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int i);
+
+    if (refmod_out_tx.stalled == dut_out_tx.stalled) begin
+      `uvm_info(get_name(), $sformatf("'stalled' signal matches. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.stalled, i, refmod_out_tx.stalled), UVM_DEBUG)
+      return 1;
+    end else begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'stall' signal. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.stalled, i, refmod_out_tx.stalled))
+      return 0;
+    end
+
+  endfunction: is_stalled_same
+
+
+  function bit is_dataoutv_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int i);
+
+    if (refmod_out_tx.dataoutv == dut_out_tx.dataoutv) begin
+      `uvm_info(get_name(), $sformatf("'dataoutv' signal matches. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.dataoutv, i, refmod_out_tx.dataoutv), UVM_DEBUG)
+      return 1;
+    end else begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'dataoutv' signal. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.dataoutv, i, refmod_out_tx.dataoutv))
+      return 0;
+    end
+    
+  endfunction: is_dataoutv_same
+
+
+  function bit is_dataout_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int i);
+
+    if (({`DATA_WIDTH{refmod_out_tx.dataoutv}}&refmod_out_tx.dataout) === ({`DATA_WIDTH{dut_out_tx.dataoutv}}&dut_out_tx.dataout)) begin
+      `uvm_info(get_name(), $sformatf("'dataout' signal matches. DUT[%0d]: %h, REF[%0d]: %h", i, dut_out_tx.dataout, i, refmod_out_tx.dataout), UVM_DEBUG)
+      return 1;
+    end else begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'dataout' signal. DUT[%0d]: %h, REF[%0d]: %h", i, dut_out_tx.dataout, i, refmod_out_tx.dataout))
+      return 0;
+    end
+
+  endfunction: is_dataout_same
   
 endclass: comparator_class

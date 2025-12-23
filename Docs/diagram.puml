@@ -47,7 +47,7 @@ Input_IFC -> Input_Monitor: Reset wire wiggle @clock negedge
 Input_Monitor -> Reference_Model : TLM put <<reset_transaction>>
 
 Output_IFC -> Output_Monitor: Interface wiggle @clock negedge
-Output_Monitor -> Comparator: TLM put <<output_transaction>>
+Output_Monitor -> Comparator: TLM get <<output_transaction>>
 
 Reference_Model -> Comparator : TLM get <output_transaction>>
 @enduml

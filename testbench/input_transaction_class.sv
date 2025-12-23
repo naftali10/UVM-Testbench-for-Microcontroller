@@ -66,7 +66,7 @@ class input_transaction_class extends uvm_sequence_item;
 
     function bit will_reset();
 
-        return this.reset == 1'b1 && this.is_valid();
+        return this.reset == 1'b1;
 
     endfunction : will_reset
 
