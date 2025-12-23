@@ -111,12 +111,12 @@ class comparator_class extends uvm_component;
 
   function bit is_stalled_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int i);
 
-    if (refmod_out_tx.stalled != dut_out_tx.stalled) begin
-      `uvm_error(get_name(), $sformatf("Mismatch in 'stall' signal. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.stalled, i, refmod_out_tx.stalled))
-      return 0;
-    end else begin
+    if (refmod_out_tx.stalled == dut_out_tx.stalled) begin
       `uvm_info(get_name(), $sformatf("'stalled' signal matches. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.stalled, i, refmod_out_tx.stalled), UVM_DEBUG)
       return 1;
+    end else begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'stall' signal. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.stalled, i, refmod_out_tx.stalled))
+      return 0;
     end
 
   endfunction: is_stalled_same
@@ -124,12 +124,12 @@ class comparator_class extends uvm_component;
 
   function bit is_dataoutv_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int i);
 
-    if (refmod_out_tx.dataoutv != dut_out_tx.dataoutv) begin
-      `uvm_error(get_name(), $sformatf("Mismatch in 'dataoutv' signal. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.dataoutv, i, refmod_out_tx.dataoutv))
-      return 0;
-    end else begin
+    if (refmod_out_tx.dataoutv == dut_out_tx.dataoutv) begin
       `uvm_info(get_name(), $sformatf("'dataoutv' signal matches. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.dataoutv, i, refmod_out_tx.dataoutv), UVM_DEBUG)
       return 1;
+    end else begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'dataoutv' signal. DUT[%0d]: %b, REF[%0d]: %b", i, dut_out_tx.dataoutv, i, refmod_out_tx.dataoutv))
+      return 0;
     end
     
   endfunction: is_dataoutv_same
@@ -137,12 +137,12 @@ class comparator_class extends uvm_component;
 
   function bit is_dataout_same(output_transaction_class refmod_out_tx, output_transaction_class dut_out_tx, int i);
 
-    if (refmod_out_tx.dataout&refmod_out_tx.dataoutv != dut_out_tx.dataout&dut_out_tx.dataoutv) begin
-      `uvm_error(get_name(), $sformatf("Mismatch in 'dataout' signal. DUT[%0d]: %h, REF[%0d]: %h", i, dut_out_tx.dataout, i, refmod_out_tx.dataout))
-      return 0;
-    end else begin
+    if (({`DATA_WIDTH{refmod_out_tx.dataoutv}}&refmod_out_tx.dataout) === ({`DATA_WIDTH{dut_out_tx.dataoutv}}&dut_out_tx.dataout)) begin
       `uvm_info(get_name(), $sformatf("'dataout' signal matches. DUT[%0d]: %h, REF[%0d]: %h", i, dut_out_tx.dataout, i, refmod_out_tx.dataout), UVM_DEBUG)
       return 1;
+    end else begin
+      `uvm_error(get_name(), $sformatf("Mismatch in 'dataout' signal. DUT[%0d]: %h, REF[%0d]: %h", i, dut_out_tx.dataout, i, refmod_out_tx.dataout))
+      return 0;
     end
 
   endfunction: is_dataout_same
