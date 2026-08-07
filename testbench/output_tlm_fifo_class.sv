@@ -43,7 +43,7 @@ class output_tlm_fifo_class extends tlm_fifo_class#(output_transaction_class);
         output_transaction_class result = output_transaction_class::type_id::create("result");
         
         move_items_to_temp_fifo(this.used());
-        move_items_from_temp_fifo(this.used()-1);
+        move_items_from_temp_fifo(temp_fifo.used()-1);
 
         temp_fifo.try_get(tx);
         result.copy(tx);
@@ -88,6 +88,9 @@ class output_tlm_fifo_class extends tlm_fifo_class#(output_transaction_class);
     function void add_stalls(int count);
 
         output_transaction_class tx;
+
+        if (this.used() < count)
+            `uvm_error(get_name(), $sformatf("Cant stall %0d item(s) because There are only %0d item(s) in FIFO", count, this.used()));
 
         for (int i = 0; i < count; i++) begin
             tx = output_transaction_class::type_id::create("tx");
