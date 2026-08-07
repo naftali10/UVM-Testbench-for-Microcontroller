@@ -87,10 +87,10 @@ class comparator_class extends uvm_component;
     `uvm_info(get_name(), "Printing contents of DUT and REF model output FIFOs:", UVM_NONE)
 
     for (int i = 0; i < temp_DUT_fifo.size(); i++) begin
-      `uvm_info(get_name(), $sformatf("DUT FIFO %2d: stalled=%0h, dataoutv=%0h, dataout=%0h", i, temp_DUT_fifo[i].stalled, temp_DUT_fifo[i].dataoutv, temp_DUT_fifo[i].dataout), UVM_NONE)
+      `uvm_info(get_name(), $sformatf("DUT FIFO %2d: time=%0d, stalled=%0h, dataoutv=%0h, dataout=%0h", i, temp_DUT_fifo[i].create_time, temp_DUT_fifo[i].stalled, temp_DUT_fifo[i].dataoutv, temp_DUT_fifo[i].dataout), UVM_NONE)
     end
     for (int j = 0; j < temp_REF_fifo.size(); j++) begin
-      `uvm_info(get_name(), $sformatf("REFMOD FIFO %2d: stalled=%0h, dataoutv=%0h, dataout=%0h", j, temp_REF_fifo[j].stalled, temp_REF_fifo[j].dataoutv, temp_REF_fifo[j].dataout), UVM_NONE)
+      `uvm_info(get_name(), $sformatf("REFMOD FIFO %2d: time=%0d, stalled=%0h, dataoutv=%0h, dataout=%0h", j, temp_REF_fifo[j].create_time, temp_REF_fifo[j].stalled, temp_REF_fifo[j].dataoutv, temp_REF_fifo[j].dataout), UVM_NONE)
     end
 
   endfunction: print_fifos
