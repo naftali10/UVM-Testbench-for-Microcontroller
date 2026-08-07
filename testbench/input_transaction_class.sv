@@ -83,9 +83,9 @@ class input_transaction_class extends uvm_sequence_item;
     function void verify_time(integer t);
 
         if (create_time == t) begin
-            `uvm_info(get_name(), $sformatf("Transaction is at expected time %d", t), UVM_DEBUG);
+            `uvm_info(get_name(), $sformatf("Transaction is at expected time %0d", t), UVM_DEBUG);
         end else begin
-            `uvm_error(get_name(), $sformatf("Transaction is not at expected time %d", t));
+            `uvm_error(get_name(), $sformatf("Transaction is at time %0d, and not at expected time %0d", create_time, t));
         end
 
     endfunction

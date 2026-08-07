@@ -21,4 +21,15 @@ class reset_transaction_class extends uvm_sequence_item;
 
   endfunction : will_reset
 
+
+  function void verify_time(integer t);
+
+    if (create_time == t) begin
+        `uvm_info(get_name(), $sformatf("Transaction is at expected time %0d", t), UVM_DEBUG);
+    end else begin
+        `uvm_error(get_name(), $sformatf("Transaction is at time %0d, and not at expected time %0d", create_time, t));
+    end
+
+  endfunction
+
 endclass: reset_transaction_class
