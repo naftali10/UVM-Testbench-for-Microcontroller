@@ -2,8 +2,8 @@ class tlm_fifo_class#(type T = uvm_transaction) extends uvm_tlm_fifo#(T);
 
     `uvm_object_utils(tlm_fifo_class#(T))
 
-    function new (string name = "");
-        super.new(name);
+    function new (string name = "", uvm_component parent = null, int size_ = 0);
+        super.new(name, parent, size_);
     endfunction: new
 
 

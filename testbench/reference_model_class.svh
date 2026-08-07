@@ -49,10 +49,10 @@ class reference_model_class extends uvm_component;
 
     DUT_inputs_tlm              = new("DUT_inputs_tlm",              this);
     reset_tlm                   = new("reset_tlm",                   this);
-    outputs_fifo_tlm            = new("outputs_fifo_tlm"                 );
-    DUT_inputs_fifo             = new("DUT_inputs_fifo"                  );
-    reset_fifo                  = new("reset_fifo"                       );
-    speculated_outputs_fifo_tlm = new("speculated_outputs_fifo_tlm"      );
+    DUT_inputs_fifo             = new("DUT_inputs_fifo",             this, 0);
+    reset_fifo                  = new("reset_fifo",                  this, 0);
+    outputs_fifo_tlm            = new("outputs_fifo_tlm",            this, 0);
+    speculated_outputs_fifo_tlm = new("speculated_outputs_fifo_tlm", this, 0);
 
   endfunction: make_tlm
 
@@ -97,7 +97,8 @@ class reference_model_class extends uvm_component;
 
     integer simulation_length = get_simulation_length();
 
-    for (integer global_time = 0; global_time < simulation_length; global_time++) begin
+    for (integer global_time = 1; global_time < simulation_length; global_time++) begin
+      `uvm_info(get_name(), $sformatf("Global time is %0d of %0d", global_time, simulation_length), UVM_NONE);
       predict_by_inputs_FIFO(global_time);
       // predict_by_reset_FIFO(global_time+1);
       // predict_from_speculated_WB(global_time);
@@ -120,6 +121,7 @@ class reference_model_class extends uvm_component;
 
     inputs_tx = DUT_inputs_fifo.get_transaction();
     inputs_tx.verify_time(global_time);
+    `uvm_info(get_name(), "Processing transaction:", UVM_NONE) inputs_tx.print();
 
     if (inputs_tx.will_reset()) begin
       delete_speculated_outputs();

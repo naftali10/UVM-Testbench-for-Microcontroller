@@ -5,8 +5,8 @@ class output_tlm_fifo_class extends tlm_fifo_class#(output_transaction_class);
     uvm_tlm_fifo#(output_transaction_class) temp_fifo;
 
 
-    function new (string name = "");
-        super.new(name);
+    function new (string name = "", uvm_component parent = null, int size_ = 0);
+        super.new(name, parent, size_);
         temp_fifo = new("temp_fifo", this, 0);
     endfunction: new
 
