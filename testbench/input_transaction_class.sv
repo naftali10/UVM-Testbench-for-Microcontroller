@@ -12,15 +12,17 @@ class input_transaction_class extends uvm_sequence_item;
   rand t_data imm;
   rand t_reg_name src1, src2;
   rand t_reg_name dst;
+  rand integer create_time;
   
   `uvm_object_utils_begin(input_transaction_class)
-    `uvm_field_int (reset, UVM_ALL_ON)
-    `uvm_field_int (instv, UVM_ALL_ON)
-    `uvm_field_enum (t_opcode, opcode, UVM_ALL_ON)
-    `uvm_field_int (imm, UVM_ALL_ON | UVM_DEC)
-    `uvm_field_enum (t_reg_name, src1, UVM_ALL_ON)
-    `uvm_field_enum (t_reg_name, src2, UVM_ALL_ON)
-    `uvm_field_enum (t_reg_name, dst, UVM_ALL_ON)
+    `uvm_field_int  (reset,               UVM_ALL_ON)
+    `uvm_field_int  (instv,               UVM_ALL_ON)
+    `uvm_field_enum (t_opcode,    opcode, UVM_ALL_ON)
+    `uvm_field_int  (imm,                 UVM_ALL_ON | UVM_DEC)
+    `uvm_field_enum (t_reg_name,  src1,   UVM_ALL_ON)
+    `uvm_field_enum (t_reg_name,  src2,   UVM_ALL_ON)
+    `uvm_field_enum (t_reg_name,  dst,    UVM_ALL_ON)
+    `uvm_field_int  (create_time,         UVM_ALL_ON | UVM_DEC)
   `uvm_object_utils_end
 
 
@@ -76,5 +78,16 @@ class input_transaction_class extends uvm_sequence_item;
         return this.opcode != LD && this.opcode != OUT;
 
     endfunction : uses_src2
+
+
+    function void verify_time(integer t);
+
+        if (create_time == t) begin
+            `uvm_info(get_name(), $sformatf("Transaction is at expected time %d", t), UVM_DEBUG);
+        end else begin
+            `uvm_error(get_name(), $sformatf("Transaction is not at expected time %d", t));
+        end
+
+    endfunction
 
 endclass: input_transaction_class
