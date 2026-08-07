@@ -97,12 +97,12 @@ class reference_model_class extends uvm_component;
 
     integer simulation_length = get_simulation_length();
 
-    for (integer global_time = 1; global_time < simulation_length; global_time++) begin
-      `uvm_info(get_name(), $sformatf("Global time is %0d of %0d", global_time, simulation_length), UVM_NONE);
-      predict_by_inputs_FIFO(global_time);
-      // predict_by_reset_FIFO(global_time+1);
-      // predict_from_speculated_WB(global_time);
-      global_time += 2;
+    for (integer sim_time = 1; sim_time < simulation_length; sim_time += 2) begin
+      `uvm_info(get_name(), $sformatf("Simulation time is %0d of %0d", sim_time, simulation_length), UVM_NONE);
+      predict_by_inputs_FIFO(sim_time);
+      predict_by_reset_FIFO(sim_time+1);
+      predict_from_speculated_WB(sim_time);
+      print_outputs_fifo();
     end
 
   endfunction: predict_outputs
@@ -115,15 +115,16 @@ class reference_model_class extends uvm_component;
   endfunction: get_simulation_length
 
 
-  function void predict_by_inputs_FIFO(integer global_time);
+  function void predict_by_inputs_FIFO(integer sim_time);
 
     input_transaction_class inputs_tx = input_transaction_class::type_id::create("inputs_tx");
 
     inputs_tx = DUT_inputs_fifo.get_transaction();
-    inputs_tx.verify_time(global_time);
+    inputs_tx.verify_time(sim_time);
     `uvm_info(get_name(), "Processing transaction:", UVM_NONE) inputs_tx.print();
 
     if (inputs_tx.will_reset()) begin
+      `uvm_info(get_name(), $sformatf("instruction will reset. deleting speculations and adding prediction"), UVM_NONE);
       delete_speculated_outputs();
       delete_speculated_WB();
       outputs_fifo_tlm.add_prediction(not_stalled_not_valid);
@@ -131,31 +132,36 @@ class reference_model_class extends uvm_component;
 
     if (inputs_tx.will_writeback()) begin
       if (outputs_fifo_tlm.is_last_stalled()) begin
+          `uvm_info(get_name(), $sformatf("instruction does nothing. predicting from speculated outputs"), UVM_NONE);
           predict_from_speculated_outputs();
       end else begin
         if (speculated_outputs_fifo_tlm.is_empty()) begin
+          `uvm_info(get_name(), $sformatf("instruction will writeback. predicting 4 steps ahead"), UVM_NONE);
           outputs_fifo_tlm.           add_prediction(yes_stalled_not_valid);
-          speculated_outputs_fifo_tlm.add_prediction(yes_stalled_not_valid);
           speculated_outputs_fifo_tlm.add_prediction(yes_stalled_not_valid);
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid);
         end else begin
-          add_stall_to_first_3_speculated_outputs();
+          `uvm_info(get_name(), $sformatf("instruction will writeback. stalling 3 steps ahead, and predicting from speculation."), UVM_NONE);
+          add_stall_to_first_2_speculated_outputs();
           predict_from_speculated_outputs();
         end        
-        // add_speculated_WB(inputs_tx, global_time);   //  <-- Stopped here
+        // add_speculated_WB(inputs_tx, sim_time);   //  <-- Stopped here
       end
     end else
 
     if (inputs_tx.will_output()) begin
       if (outputs_fifo_tlm.is_last_stalled()) begin
+        `uvm_info(get_name(), $sformatf("instruction does nothing. predicting from speculated outputs"), UVM_NONE);
         predict_from_speculated_outputs();
       end else begin
         if (speculated_outputs_fifo_tlm.is_empty()) begin
+          `uvm_info(get_name(), $sformatf("instruction will output. predicting 4 steps ahead"), UVM_NONE);
           outputs_fifo_tlm.           add_prediction(not_stalled_not_valid);
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid);
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid);
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid);
         end else begin  // No stall, and there are spculations ==> OUT was latest instruction
+          `uvm_info(get_name(), $sformatf("instruction will output after output. predicting from specultaion and adding 1 speculation"), UVM_NONE);
           predict_from_speculated_outputs();
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid);
         end
@@ -163,6 +169,22 @@ class reference_model_class extends uvm_component;
     end
 
   endfunction: predict_by_inputs_FIFO
+
+
+  function void predict_by_reset_FIFO(int sim_time);
+
+    reset_transaction_class reset_tx = reset_transaction_class::type_id::create("reset_tx");
+
+    reset_tx = reset_fifo.get_transaction();
+    reset_tx.verify_time(sim_time);
+
+    if (reset_tx.will_reset()) begin
+      `uvm_info(get_name(), $sformatf("instruction will reset. deleting speculations and adding prediction"), UVM_NONE);
+      delete_speculated_outputs();
+      delete_speculated_WB();
+    end
+  
+  endfunction: predict_by_reset_FIFO
 
 
   function void delete_speculated_outputs();
@@ -188,11 +210,19 @@ class reference_model_class extends uvm_component;
   endfunction: predict_from_speculated_outputs
 
 
-  function void add_stall_to_first_3_speculated_outputs();
+  function void add_stall_to_first_2_speculated_outputs();
 
-    speculated_outputs_fifo_tlm.add_stalls(3);
+    speculated_outputs_fifo_tlm.add_stalls(2);
 
-  endfunction: add_stall_to_first_3_speculated_outputs
+  endfunction: add_stall_to_first_2_speculated_outputs
+
+
+  function void predict_from_speculated_WB(int sim_time);
+
+    if (speculated_regfile.create_time == sim_time)
+        regfile.copy(speculated_regfile);
+
+  endfunction: predict_from_speculated_WB
 
 
   virtual function print_outputs_fifo();
@@ -210,34 +240,3 @@ class reference_model_class extends uvm_component;
   endfunction: print_outputs_fifo
 
 endclass: reference_model_class
-
-
-
-
-
-
-
-
-void function predict_by_reset_FIFO(int global_time);
-
-  get_reset_tx_from_FIFO();
-  verify_reset_tx_time();
-
-  if (reset_tx.will_reset()) begin
-    delete_speculated_outputs();
-    delete_speculated_WB();
-  end
-
-endfunction
-
-
-void function predict_from_speculated_WB(int global_time);
-
-  if (speculated_WB_FIFO.is_empty()) begin
-  end else begin
-    if (global_time == speculated_WB_FIFO.get_first().create_time) begin
-      apply_speculated_WB();
-    end
-  end
-
-endfunction
