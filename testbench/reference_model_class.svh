@@ -9,24 +9,23 @@ class reference_model_class extends uvm_component;
   // Instantiation
   uvm_analysis_imp#       (input_transaction_class,  reference_model_class)    DUT_inputs_tlm;
   uvm_blocking_put_imp#   (reset_transaction_class,  reference_model_class)    reset_tlm;
-  uvm_tlm_fifo#           (output_transaction_class) outputs_fifo_tlm;
+  tlm_fifo_class#         (input_transaction_class) DUT_inputs_fifo;
+  tlm_fifo_class#         (reset_transaction_class) reset_fifo;
+  output_tlm_fifo_class   outputs_fifo_tlm, speculated_outputs_fifo_tlm;
 
-  int stall_counter = 0;
-  bit last_in_fifo_tlm_is_valid_out = 0;
-  t_data regfile [`REG_AMT-1:0];
-  output_transaction_class not_stalled_not_valid;
-  output_transaction_class stalled_not_valid;
-  output_transaction_class not_stalled_valid;
+  regfile_transaction_class regfile, speculated_regfile;
+  output_transaction_class not_stalled_not_valid, yes_stalled_not_valid, not_stalled_yes_valid;
+
+  bit reset_flag;
 
 
   virtual function void build_phase(uvm_phase phase);
 
     super.build_phase(phase);
-    DUT_inputs_tlm   = new("DUT_inputs_tlm",   this);
-    reset_tlm        = new("reset_tlm",        this);
-    outputs_fifo_tlm = new("outputs_fifo_tlm", this, 0);
-
+    make_tlm();
     make_output_templates();
+    make_regfile();
+    reset_flag = 0;
 
   endfunction: build_phase
 
@@ -35,292 +34,239 @@ class reference_model_class extends uvm_component;
 
     input_transaction_class tx_transfer = input_transaction_class::type_id::create("tx_transfer");
     tx_transfer.copy(t);
-    if (should_predict(tx_transfer))
-      predict_outputs(tx_transfer);
+    DUT_inputs_fifo.try_put(tx_transfer);
 
   endfunction: write
 
   
-  virtual task put (input reset_transaction_class t);
+  virtual task put(input reset_transaction_class t);
 
-    input_transaction_class tx_transfer = input_transaction_class::type_id::create("tx_transfer");
+    reset_transaction_class tx_transfer = reset_transaction_class::type_id::create("tx_transfer");
     tx_transfer.copy(t);
-    if (tx_transfer.reset == 1'b1) begin
-      tx_transfer.reset = 1'b1;
-    end
-    stall_counter = stall_counter-1;
+    reset_fifo.try_put(tx_transfer);
 
   endtask: put
 
 
-  function bit should_predict(input_transaction_class tx);
+  function void make_tlm();
 
-    case ({0<stall_counter, tx.reset}) inside
-      2'b10:               begin `uvm_info(get_name(), "Sequence item is stalled. Skipping.",   UVM_DEBUG) return 0; end
-      2'b00, 2'b?1, 2'b0x: begin /*`uvm_info(get_name(), "Sequence item accepted for prediction:",UVM_NONE) tx.print();*/ return 1; end
-      default: begin
-        `uvm_error(get_name(), $sformatf("Unexpected case. %b", {0<stall_counter, tx.reset}))
-        return 0;
-      end
-    endcase
+    DUT_inputs_tlm              = new("DUT_inputs_tlm",              this);
+    reset_tlm                   = new("reset_tlm",                   this);
+    DUT_inputs_fifo             = new("DUT_inputs_fifo",             this, 0);
+    reset_fifo                  = new("reset_fifo",                  this, 0);
+    outputs_fifo_tlm            = new("outputs_fifo_tlm",            this, 0);
+    speculated_outputs_fifo_tlm = new("speculated_outputs_fifo_tlm", this, 0);
 
-  endfunction: should_predict
+  endfunction: make_tlm
 
 
   function void make_output_templates();
 
     not_stalled_not_valid = output_transaction_class::type_id::create("not_stalled_not_valid");
-    stalled_not_valid     = output_transaction_class::type_id::create("stalled_not_valid");
-    not_stalled_valid     = output_transaction_class::type_id::create("not_stalled_valid");
+    not_stalled_yes_valid = output_transaction_class::type_id::create("not_stalled_yes_valid");
+    yes_stalled_not_valid = output_transaction_class::type_id::create("yes_stalled_not_valid");
 
     not_stalled_not_valid.stalled  = 1'b0;
     not_stalled_not_valid.dataoutv = 1'b0;
 
-    stalled_not_valid.stalled  = 1'b1;
-    stalled_not_valid.dataoutv = 1'b0;
+    not_stalled_yes_valid.stalled  = 1'b0;
+    not_stalled_yes_valid.dataoutv = 1'b1;
 
-    not_stalled_valid.stalled  = 1'b0;
-    not_stalled_valid.dataoutv = 1'b1;
+    yes_stalled_not_valid.stalled  = 1'b1;
+    yes_stalled_not_valid.dataoutv = 1'b0;
 
   endfunction: make_output_templates
 
 
-  function void predict_outputs(input_transaction_class tx);
+  function void make_regfile();
 
-    if (tx.will_reset()) begin
-      predict_reset();
-      stall_counter = 0;
-    end
-    else if (tx.will_output()) begin
-      predict_out(tx);
-      stall_counter = 0;
-    end
-    else if (tx.will_writeback()) begin
-      predict_writeback(tx);
-      stall_counter = 3;
-    end
-    else if (!tx.is_legal()) begin
-      predict_illegal();
-      stall_counter = 0;
-    end else begin
-      `uvm_error(get_name(), "Instruction is neither reset, output, nor writeback. This should never happen.")
+    regfile = regfile_transaction_class::type_id::create("regfile");
+    speculated_regfile = regfile_transaction_class::type_id::create("speculated_regfile");
+    regfile.reset();
+    speculated_regfile.reset();
+
+  endfunction: make_regfile
+
+
+  virtual function void extract_phase(uvm_phase phase);
+
+    super.extract_phase(phase);
+    predict_outputs();
+
+  endfunction: extract_phase
+
+
+  function void predict_outputs();
+
+    integer simulation_length = get_simulation_length();
+
+    for (integer sim_time = 1; sim_time < simulation_length; sim_time += 2) begin
+      `uvm_info(get_name(), $sformatf("Simulation time is %0d of %0d", sim_time, simulation_length), UVM_NONE);
+      predict_by_inputs_FIFO(sim_time);
+      predict_by_reset_FIFO(sim_time+1);
+      predict_from_speculated_WB(sim_time);
+      print_outputs_fifo();
     end
 
   endfunction: predict_outputs
 
 
-  function void predict_reset();
+  function integer get_simulation_length();
 
-    output_transaction_class not_stalled_not_valid_copy = output_transaction_class::type_id::create("not_stalled_not_valid_copy");
-    not_stalled_not_valid_copy.copy(not_stalled_not_valid);
-    
-    if (outputs_fifo_tlm.is_empty())
-      outputs_fifo_tlm.try_put(not_stalled_not_valid_copy);
+    return reset_fifo.used() * 2;
 
-    if (last_in_fifo_tlm_is_valid_out)
-      flush_last_two_existing_preditions();
-    
-    last_in_fifo_tlm_is_valid_out = 0;
-
-  endfunction: predict_reset
+  endfunction: get_simulation_length
 
 
-  function void predict_out(input_transaction_class tx);
+  function void predict_by_inputs_FIFO(integer sim_time);
 
-    output_transaction_class valid_out                   = output_transaction_class::type_id::create("valid_out");
-    output_transaction_class not_stalled_not_valid_copy1 = output_transaction_class::type_id::create("not_stalled_not_valid_copy1");
-    output_transaction_class not_stalled_not_valid_copy2 = output_transaction_class::type_id::create("not_stalled_not_valid_copy2");
-    output_transaction_class not_stalled_not_valid_copy3 = output_transaction_class::type_id::create("not_stalled_not_valid_copy3");
+    input_transaction_class inputs_tx = input_transaction_class::type_id::create("inputs_tx");
 
-    valid_out                  .copy(not_stalled_valid);
-    not_stalled_not_valid_copy1.copy(not_stalled_not_valid);
-    not_stalled_not_valid_copy2.copy(not_stalled_not_valid);
-    not_stalled_not_valid_copy3.copy(not_stalled_not_valid);
+    inputs_tx = DUT_inputs_fifo.get_transaction();
+    inputs_tx.verify_time(sim_time);
+    `uvm_info(get_name(), "Processing inputs transaction:", UVM_NONE) inputs_tx.print();
 
-    valid_out.dataout = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
-    
-    if (last_in_fifo_tlm_is_valid_out)
-      outputs_fifo_tlm.try_put(valid_out);
-    else begin
-      outputs_fifo_tlm.try_put(not_stalled_not_valid_copy1);
-      outputs_fifo_tlm.try_put(not_stalled_not_valid_copy2);
-      outputs_fifo_tlm.try_put(not_stalled_not_valid_copy3);
-      outputs_fifo_tlm.try_put(valid_out);
+    if (inputs_tx.will_reset()  || reset_flag) begin
+      if (speculated_outputs_fifo_tlm.is_empty()) begin
+        `uvm_info(get_name(), $sformatf("instruction will reset. predicting 1 step backwards."), UVM_NONE);
+        outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time-1);
+      end else begin
+          `uvm_info(get_name(), $sformatf("instruction will reset. predicting from speculation, then deleting it."), UVM_NONE);
+          predict_from_speculated_outputs();
+      end
+      delete_speculated_outputs();
+      delete_speculated_WB();
+      reset_flag = 0;
+    end else
+
+    if (inputs_tx.will_writeback()) begin
+      if (outputs_fifo_tlm.is_last_stalled()) begin
+          `uvm_info(get_name(), $sformatf("instruction does nothing. predicting from speculated outputs"), UVM_NONE);
+          predict_from_speculated_outputs();
+      end else begin
+        if (speculated_outputs_fifo_tlm.is_empty()) begin
+          `uvm_info(get_name(), $sformatf("instruction will writeback. predicting 3 steps ahead"), UVM_NONE);
+          outputs_fifo_tlm.           add_prediction(yes_stalled_not_valid, sim_time-1);
+          speculated_outputs_fifo_tlm.add_prediction(yes_stalled_not_valid, sim_time+1);
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time+3);
+        end else begin
+          `uvm_info(get_name(), $sformatf("instruction will writeback. stalling 2 steps ahead, and predicting from speculation."), UVM_NONE);
+          add_stall_to_first_2_speculated_outputs();
+          predict_from_speculated_outputs();
+        end
+        `uvm_info(get_name(), $sformatf("adding speculated writeback"), UVM_NONE);
+        add_speculated_WB(inputs_tx, sim_time+4);
+      end
+    end else
+
+    if (inputs_tx.will_output()) begin
+      if (outputs_fifo_tlm.is_last_stalled()) begin
+        `uvm_info(get_name(), $sformatf("instruction does nothing. predicting from speculated outputs"), UVM_NONE);
+        predict_from_speculated_outputs();
+      end else begin
+        if (speculated_outputs_fifo_tlm.is_empty()) begin
+          `uvm_info(get_name(), $sformatf("instruction will output. predicting 4 steps ahead"), UVM_NONE);
+          outputs_fifo_tlm.           add_prediction(not_stalled_not_valid, sim_time-1);
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time+1);
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time+3);
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5, regfile.get_reg(inputs_tx.src1));
+        end else begin  // No stall, and there are spculations ==> OUT was latest instruction
+          `uvm_info(get_name(), $sformatf("instruction will output after output. predicting from specultaion and adding 1 speculation"), UVM_NONE);
+          predict_from_speculated_outputs();
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5, regfile.get_reg(inputs_tx.src1));
+        end
+      end
     end
-    last_in_fifo_tlm_is_valid_out = 1;
 
-  endfunction: predict_out
-
-
-  function void predict_writeback(input_transaction_class tx);
-
-    t_data result;
-
-    output_transaction_class stalled_not_valid_copy1    = output_transaction_class::type_id::create("stalled_not_valid_copy1");
-    output_transaction_class stalled_not_valid_copy2    = output_transaction_class::type_id::create("stalled_not_valid_copy2");
-    output_transaction_class not_stalled_not_valid_copy = output_transaction_class::type_id::create("not_stalled_not_valid_copy");
-
-    stalled_not_valid_copy1   .copy(stalled_not_valid);
-    stalled_not_valid_copy2   .copy(stalled_not_valid);
-    not_stalled_not_valid_copy.copy(not_stalled_not_valid);
-
-    result = alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm);
-    write_regfile(result, tx.dst);
-    `uvm_info(get_name(), $sformatf("Writing back %0h to R%0d", result, tx.dst), UVM_NONE)
-    if (last_in_fifo_tlm_is_valid_out) begin
-      add_writeack_stalls_to_existing_prediction();
-    end 
-    else begin
-      outputs_fifo_tlm.try_put(stalled_not_valid_copy1);
-      outputs_fifo_tlm.try_put(stalled_not_valid_copy2);
-      outputs_fifo_tlm.try_put(not_stalled_not_valid_copy);
-    end
-    last_in_fifo_tlm_is_valid_out = 0;
-
-  endfunction: predict_writeback
+  endfunction: predict_by_inputs_FIFO
 
 
-  function void predict_illegal();
+  function void predict_by_reset_FIFO(int sim_time);
 
-    output_transaction_class not_stalled_not_valid_copy = output_transaction_class::type_id::create("not_stalled_not_valid_copy");
-    not_stalled_not_valid_copy.copy(not_stalled_not_valid);
+    reset_transaction_class reset_tx = reset_transaction_class::type_id::create("reset_tx");
+
+    reset_tx = reset_fifo.get_transaction();
+    reset_tx.verify_time(sim_time);
     
-    outputs_fifo_tlm.try_put(not_stalled_not_valid_copy);
+    `uvm_info(get_name(), "Processing reset transaction:", UVM_NONE) reset_tx.print();
 
-    last_in_fifo_tlm_is_valid_out = 0;
+    if (reset_tx.will_reset()) begin
+      `uvm_info(get_name(), $sformatf("instruction will reset. raising reset flag."), UVM_NONE);
+      reset_flag = 1;
+    end
   
-  endfunction: predict_illegal
+  endfunction: predict_by_reset_FIFO
 
 
-  function void flush_last_two_existing_preditions();
+  function void delete_speculated_outputs();
 
-    output_transaction_class item;
-    int fifo_size = outputs_fifo_tlm.used();
-    output_transaction_class temp_fifo[$];
+    speculated_outputs_fifo_tlm.flush();
 
-    // Store in temp_fifo all but last 2 items
-    for (int i = 0; i < fifo_size-2; i++) begin
-      outputs_fifo_tlm.try_get(item);
-      temp_fifo.push_back(item);
-    end
-
-    // Discard last 2 items
-    for (int i = 0; i < 2; i++) begin
-      outputs_fifo_tlm.try_get(item);
-    end
-
-    // Reinsert all items back to outputs_fifo_tlm
-    for (int i = 0; i < fifo_size-2; i++) begin
-      outputs_fifo_tlm.try_put(temp_fifo[i]);
-    end
-
-  endfunction: flush_last_two_existing_preditions
-
-  function void add_writeack_stalls_to_existing_prediction();
-
-    output_transaction_class item;
-    int fifo_size = outputs_fifo_tlm.used();
-    output_transaction_class temp_fifo[$];
-
-    // Store in temp_fifo all but last 3 items
-    for (int i = 0; i < fifo_size-3; i++) begin
-      outputs_fifo_tlm.try_get(item);
-      temp_fifo.push_back(item);
-    end
-
-    // Add stall to last two items
-    for (int i = 0; i < 2; i++) begin
-      outputs_fifo_tlm.try_get(item);
-      item.stalled = 1'b1;
-      temp_fifo.push_back(item);
-    end
-
-    // Add valid_out to temp_fifo
-    outputs_fifo_tlm.try_get(item);
-    temp_fifo.push_back(item);
-
-    // Reinsert all items back to outputs_fifo_tlm
-    for (int i = 0; i < fifo_size; i++) begin
-      outputs_fifo_tlm.try_put(temp_fifo[i]);
-    end
-
-  endfunction: add_writeack_stalls_to_existing_prediction
-
-
-  function t_data get_reg (t_reg_name source, t_data imm);
-
-    case(source)
-      R0: return regfile[0];
-      R1: return regfile[1];
-      R2: return regfile[2];
-      R3: return regfile[3];
-      IMM: return imm;
-      default: `uvm_error(get_name(), $sformatf("Invalid register name %0d", source))
-    endcase
-
-  endfunction: get_reg
-
-
-  function int lsb_idx(t_data num);
-
-    int i=0;
-    num = (num & (num-1)) ^ num;
-    while(num) begin
-      num = num >> 1;
-      i++;
-    end
-    return i;
-
-  endfunction: lsb_idx
+  endfunction: delete_speculated_outputs
 
   
-  function t_data alu_calculate (t_opcode opcode, t_reg_name src1, t_reg_name src2, t_data imm);
+  function void delete_speculated_WB();
 
-    case(opcode)
-      LD:   return imm;
-      OUT:  return get_reg(src1, imm);  // FIXME - nkizner - 2022-12-02 - check src1!=IMM
-      ADD:  return get_reg(src1, imm) + get_reg(src2, imm);
-      SUB:  return get_reg(src1, imm) - get_reg(src2, imm);
-      NAND: return ~(get_reg(src1, imm) & get_reg(src2, imm));
-      NOR:  return ~(get_reg(src1, imm) | get_reg(src2, imm));
-      XOR:  return get_reg(src1, imm) ^ get_reg(src2, imm);
-      SHFL: return get_reg(src1, imm) << lsb_idx(get_reg(src2, imm));
-      default: `uvm_error(get_name(), $sformatf("Invalid opcode %0h", opcode))
-    endcase
+    speculated_regfile.reset();
 
-  endfunction: alu_calculate
+  endfunction: delete_speculated_WB
 
 
-  function void write_regfile(t_data value, t_reg_name destination);
+  function void predict_from_speculated_outputs();
 
-    case (destination)
-      R0: regfile[0] = value;
-      R1: regfile[1] = value;
-      R2: regfile[2] = value;
-      R3: regfile[3] = value;
-    endcase
+    output_transaction_class tx = output_transaction_class::type_id::create("tx");
+    tx = speculated_outputs_fifo_tlm.pop_prediction();
+    outputs_fifo_tlm.add_prediction(tx);
 
-  endfunction: write_regfile
+  endfunction: predict_from_speculated_outputs
 
 
-  function void print_regfile();
+  function void add_stall_to_first_2_speculated_outputs();
 
-    $display("%0h %0h %0h %0h", regfile[0], regfile[1], regfile[2], regfile[3]);
+    speculated_outputs_fifo_tlm.add_stalls(2);
 
-  endfunction: print_regfile
+  endfunction: add_stall_to_first_2_speculated_outputs
 
 
-  virtual function print_fifo();
+  function void add_speculated_WB(input_transaction_class tx, integer sim_time);
+
+    speculated_regfile.copy(regfile);
+    speculated_regfile.apply_transaction(tx, sim_time);
+
+  endfunction: add_speculated_WB
+
+
+  function void predict_from_speculated_WB(int sim_time);
+
+    if (speculated_regfile.create_time == sim_time) begin
+      `uvm_info(get_name(), $sformatf("predicting from speculated WB."), UVM_NONE) speculated_regfile.print();
+      regfile.copy(speculated_regfile);
+    end
+
+  endfunction: predict_from_speculated_WB
+
+
+  virtual function print_outputs_fifo();
 
     int fifo_size = outputs_fifo_tlm.used();
     output_transaction_class item = output_transaction_class::type_id::create("item");
-    `uvm_info(get_name(), $sformatf("Printing FIFO contents. Size: %0d", fifo_size), UVM_NONE);
+    `uvm_info(get_name(), $sformatf("Printing outputs FIFO contents. Size: %0d", fifo_size), UVM_NONE);
     for (int i = 0; i < fifo_size; i++) begin
       if (outputs_fifo_tlm.try_get(item)) begin
-        `uvm_info(get_name(), $sformatf("FIFO Item %0d: stalled=%0h, dataoutv=%0h, dataout=%0h", i, item.stalled, item.dataoutv, item.dataout), UVM_NONE);
+        `uvm_info(get_name(), $sformatf("FIFO Item %0d: time=%0d, stalled=%0h, dataoutv=%0h, dataout=%0h", i, item.create_time, item.stalled, item.dataoutv, item.dataout), UVM_NONE);
         outputs_fifo_tlm.try_put(item);
       end
     end
-  endfunction: print_fifo
+
+    fifo_size = speculated_outputs_fifo_tlm.used();
+    `uvm_info(get_name(), $sformatf("Printing speculated outputs FIFO contents. Size: %0d", fifo_size), UVM_NONE);
+    for (int i = 0; i < fifo_size; i++) begin
+      if (speculated_outputs_fifo_tlm.try_get(item)) begin
+        `uvm_info(get_name(), $sformatf("FIFO Item %0d: time=%0d, stalled=%0h, dataoutv=%0h, dataout=%0h", i, item.create_time, item.stalled, item.dataoutv, item.dataout), UVM_NONE);
+        speculated_outputs_fifo_tlm.try_put(item);
+      end
+    end
+
+  endfunction: print_outputs_fifo
 
 endclass: reference_model_class

@@ -36,10 +36,13 @@ class input_monitor_class extends uvm_monitor;
       input_transaction_inst.src1   = dut_vifc_in.src1;
       input_transaction_inst.src2   = dut_vifc_in.src2;
       input_transaction_inst.dst    = dut_vifc_in.dst;
+      input_transaction_inst.create_time = $time;
       // `uvm_info(get_name(), "Sending to reference model", UVM_NONE) input_transaction_inst.print();
       DUT_inputs_tlm.write(input_transaction_inst);
       @(negedge dut_vifc_in.clock);
       reset_transaction_inst.reset = dut_vifc_in.reset;
+      reset_transaction_inst.create_time = $time;
+      // `uvm_info(get_name(), "Sending to reference model", UVM_NONE) reset_transaction_inst.print();
       reset_tlm.put(reset_transaction_inst);
     end
 
@@ -76,9 +79,10 @@ class output_monitor_class extends uvm_monitor;
     forever begin
       @(negedge dut_vifc_out.clock);
       transaction_inst = output_transaction_class::type_id::create("transaction_inst");
-      transaction_inst.stalled  = dut_vifc_out.stalled;
-      transaction_inst.dataoutv = dut_vifc_out.dataoutvx3;
-      transaction_inst.dataout  = dut_vifc_out.dataoutx3;
+      transaction_inst.stalled     = dut_vifc_out.stalled;
+      transaction_inst.dataoutv    = dut_vifc_out.dataoutvx3;
+      transaction_inst.dataout     = dut_vifc_out.dataoutx3;
+      transaction_inst.create_time = $time;
       DUT_outputs_fifo_tlm.try_put(transaction_inst);
     end
 
