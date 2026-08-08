@@ -1,6 +1,6 @@
 class regfile_transaction_class extends uvm_sequence_item;
 
-    `uvm_object_utils(regfile_transaction_class)
+    // `uvm_object_utils(regfile_transaction_class) // commented because of registartion below
 
     function new (string name = "");
         super.new(name);
@@ -8,6 +8,15 @@ class regfile_transaction_class extends uvm_sequence_item;
 
     rand t_data regfile [`REG_AMT-1:0];
     rand integer create_time;
+
+
+    `uvm_object_utils_begin(regfile_transaction_class)
+        `uvm_field_int (regfile[0],     UVM_ALL_ON)
+        `uvm_field_int (regfile[1],     UVM_ALL_ON)
+        `uvm_field_int (regfile[2],     UVM_ALL_ON)
+        `uvm_field_int (regfile[3],     UVM_ALL_ON)
+        `uvm_field_int (create_time,    UVM_ALL_ON | UVM_DEC)
+    `uvm_object_utils_end
 
 
     function void reset();
@@ -21,7 +30,7 @@ class regfile_transaction_class extends uvm_sequence_item;
     endfunction: reset
 
 
-    function t_data get_reg (t_reg_name source, t_data imm);
+    function t_data get_reg (t_reg_name source, t_data imm = 'x);
 
         case(source)
             R0: return regfile[0];
@@ -82,5 +91,13 @@ class regfile_transaction_class extends uvm_sequence_item;
         $display("%0h %0h %0h %0h", regfile[0], regfile[1], regfile[2], regfile[3]);
 
     endfunction: print_regfile
+
+
+    function void apply_transaction(input_transaction_class tx, integer sim_time);
+
+        write_regfile(alu_calculate(tx.opcode, tx.src1, tx.src2, tx.imm), tx.dst);
+        create_time = sim_time;
+
+    endfunction: apply_transaction
 
 endclass: regfile_transaction_class

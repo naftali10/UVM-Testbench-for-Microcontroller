@@ -62,12 +62,14 @@ class output_tlm_fifo_class extends tlm_fifo_class#(output_transaction_class);
     endfunction: is_last_stalled
 
 
-    function void add_prediction(output_transaction_class tx, integer sim_time = 0);
+    function void add_prediction(output_transaction_class tx, integer sim_time = 'x, t_data dataout = 'x);
 
         output_transaction_class t = output_transaction_class::type_id::create("t");
         t.copy(tx);
-        if (0 < sim_time)
+        if (sim_time)
             t.create_time = sim_time;
+        if (dataout)
+            t.dataout = dataout;
 
         if(this.try_put(t)) begin
             `uvm_info(get_name(), $sformatf("Successfully put output transaction into FIFO"), UVM_DEBUG);

@@ -153,8 +153,9 @@ class reference_model_class extends uvm_component;
           `uvm_info(get_name(), $sformatf("instruction will writeback. stalling 2 steps ahead, and predicting from speculation."), UVM_NONE);
           add_stall_to_first_2_speculated_outputs();
           predict_from_speculated_outputs();
-        end        
-        // add_speculated_WB(inputs_tx, sim_time);   //  <-- Stopped here
+        end
+        `uvm_info(get_name(), $sformatf("adding speculated writeback"), UVM_NONE);
+        add_speculated_WB(inputs_tx, sim_time+4);
       end
     end else
 
@@ -168,11 +169,11 @@ class reference_model_class extends uvm_component;
           outputs_fifo_tlm.           add_prediction(not_stalled_not_valid, sim_time-1);
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time+1);
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time+3);
-          speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5);
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5, regfile.get_reg(inputs_tx.src1));
         end else begin  // No stall, and there are spculations ==> OUT was latest instruction
           `uvm_info(get_name(), $sformatf("instruction will output after output. predicting from specultaion and adding 1 speculation"), UVM_NONE);
           predict_from_speculated_outputs();
-          speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5);
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5, regfile.get_reg(inputs_tx.src1));
         end
       end
     end
@@ -227,10 +228,20 @@ class reference_model_class extends uvm_component;
   endfunction: add_stall_to_first_2_speculated_outputs
 
 
+  function void add_speculated_WB(input_transaction_class tx, integer sim_time);
+
+    speculated_regfile.copy(regfile);
+    speculated_regfile.apply_transaction(tx, sim_time);
+
+  endfunction: add_speculated_WB
+
+
   function void predict_from_speculated_WB(int sim_time);
 
-    if (speculated_regfile.create_time == sim_time)
-        regfile.copy(speculated_regfile);
+    if (speculated_regfile.create_time == sim_time) begin
+      `uvm_info(get_name(), $sformatf("predicting from speculated WB."), UVM_NONE) speculated_regfile.print();
+      regfile.copy(speculated_regfile);
+    end
 
   endfunction: predict_from_speculated_WB
 
