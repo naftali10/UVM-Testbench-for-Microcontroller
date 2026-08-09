@@ -176,6 +176,22 @@ class reference_model_class extends uvm_component;
           speculated_outputs_fifo_tlm.add_prediction(not_stalled_yes_valid, sim_time+5, regfile.get_reg(inputs_tx.src1));
         end
       end
+    end else
+
+    if (inputs_tx.is_legal()) begin: inavlid_instruction
+      if (outputs_fifo_tlm.is_last_stalled()) begin
+        `uvm_info(get_name(), $sformatf("instruction does nothing. predicting from speculated outputs"), UVM_NONE);
+        predict_from_speculated_outputs();
+      end else begin
+        if (speculated_outputs_fifo_tlm.is_empty()) begin
+          `uvm_info(get_name(), $sformatf("invalid instruction. predicting 1 step backwards"), UVM_NONE);
+          outputs_fifo_tlm.           add_prediction(not_stalled_not_valid, sim_time-1);
+        end else begin
+          `uvm_info(get_name(), $sformatf("invalid instruction. predicting from specultaion and adding 1 speculation"), UVM_NONE);
+          predict_from_speculated_outputs();
+          speculated_outputs_fifo_tlm.add_prediction(not_stalled_not_valid, sim_time+5);
+        end
+      end
     end
 
   endfunction: predict_by_inputs_FIFO

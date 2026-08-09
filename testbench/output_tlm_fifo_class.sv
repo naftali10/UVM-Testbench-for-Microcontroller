@@ -66,9 +66,9 @@ class output_tlm_fifo_class extends tlm_fifo_class#(output_transaction_class);
 
         output_transaction_class t = output_transaction_class::type_id::create("t");
         t.copy(tx);
-        if (sim_time)
+        if (sim_time!=='x)
             t.create_time = sim_time;
-        if (dataout)
+        if (dataout!=='x)
             t.dataout = dataout;
 
         if(this.try_put(t)) begin
