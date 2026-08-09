@@ -11,7 +11,6 @@ module controller (
   input  t_reg_name    src2,           // meaning it can be {R0-4 or IMM}.
   input  t_reg_name    dst,            // Destination register name.
   output logic         internal_reset, // zeros signal down the pipeline.
-  output logic         clk_en_reg_IDtoEX,     // gates pipeline clock.
   output t_ALUsrc_ctrl ALUsrc1,        // tells muxes on ALU's inputs to take register
   output t_ALUsrc_ctrl ALUsrc2,        // or immediate. can be {takeGPR or takeIMM}.
   output t_opcode      ALUop,          // identical to opcode.
@@ -32,7 +31,6 @@ always_comb begin
 
   // Default values for outputs
   internal_reset = 0;
-  clk_en_reg_IDtoEX = 1;
   ALUsrc1 = takeGPR;
   ALUsrc2 = takeGPR;
   ALUop = LD;
@@ -53,10 +51,8 @@ always_comb begin
     ) inside
     {1'b1,  1'b?,  32'b?,    32'b?,       1'b?,      1'b?    }: begin : external_reset
       internal_reset = 1;
-      clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b0,  32'b?,    32'b?,       1'b?,      1'b?    }: begin : invalid_instruction
-      clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       LOAD,        takeIMM,   toGPR   }: begin : valid_LD
       next_state = STALL_EX;
@@ -66,10 +62,8 @@ always_comb begin
       stalled = 1;
     end
     {1'b0,  1'b1,  OP,       LOAD,        takeGPR,   1'b?    }: begin : invalid_LD1
-      clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       LOAD,        32'b?,     toIMM   }: begin : invalid_LD2
-      clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       OUTP,        takeGPR,   1'b?    }: begin : valid_OUT
       ALUsrc1 = takeGPR;
@@ -77,10 +71,8 @@ always_comb begin
       dataoutv = 1;
     end
     {1'b0,  1'b1,  OP,       OUTP,        takeIMM,   1'b?    }: begin : invalid_OUT
-      clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       ALU,         1'b?,      toIMM   }: begin : invalid_ALU
-      clk_en_reg_IDtoEX = 0;
     end
     {1'b0,  1'b1,  OP,       ALU,         1'b?,      toGPR   }: begin : valid_ALU
       next_state = STALL_EX;

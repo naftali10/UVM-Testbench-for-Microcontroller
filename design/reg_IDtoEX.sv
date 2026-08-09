@@ -4,7 +4,6 @@
 
 interface reg_IDtoEX (input logic clock);
 
-  logic clock_enable, gated_clock;
   logic wr_enx0;
   logic wr_enx1;
   logic dataoutvx0, dataoutvx1;
@@ -14,9 +13,7 @@ interface reg_IDtoEX (input logic clock);
   t_RFadrs dstx0;
   t_RFadrs dstx1;
 
-  assign gated_clock = clock && clock_enable;
-  
-  always_ff @(posedge gated_clock) begin
+  always_ff @(posedge clock) begin
     wr_enx1 <= wr_enx0;
     ALUsrc1x1 <= ALUsrc1x0;
     ALUsrc2x1 <= ALUsrc2x0;
@@ -29,7 +26,6 @@ interface reg_IDtoEX (input logic clock);
   end
   
   modport driver (
-    output clock_enable,
     output wr_enx0,
     output ALUsrc1x0,
     output ALUsrc2x0,
