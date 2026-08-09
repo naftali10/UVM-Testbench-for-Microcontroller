@@ -4,20 +4,22 @@
 //		 (starting at index 1 on the right).
 
 module SHFL (
-  input t_data A,		// bus to be shifted
-  input t_data B,		// shift amount bus
-  output t_data result	// data output
+  input  t_data A,        // bus to be shifted
+  input  t_data B,        // shift amount bus
+  output t_data result    // data output
   );
-  
-  int shamt=0;
-  
-  always @* begin
-    while (B[shamt]==0)
-  	  shamt++;
-    if (B==0)
-      result = A;
-  	else
-      result = A<<(shamt+1);
+
+  logic flag;
+  logic [$clog2(`DATA_WIDTH):0] shift_amt;
+
+  always_comb begin
+    flag = 1;
+    for (int i = 0; i < `DATA_WIDTH; i++) begin
+      if (B[i] && flag)
+        shift_amt = i + 1;
+        flag = 0;
+    end
+    result = A << shift_amt;
   end
-  
+
 endmodule
