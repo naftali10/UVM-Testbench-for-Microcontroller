@@ -20,7 +20,6 @@ module Decode (
     .src2             (ifc_inputs_.src2),
     .dst              (ifc_inputs_.dst),
     .internal_reset   (internal_reset),
-    .clk_en_reg_IDtoEX(reg_IDtoEX_.clock_enable),
     .ALUsrc1          (reg_IDtoEX_.ALUsrc1x0),
     .ALUsrc2          (reg_IDtoEX_.ALUsrc2x0),
     .ALUop            (reg_IDtoEX_.ALUopx0),
